@@ -105,3 +105,37 @@ def test_seleccion_distinta_no_reusa_lotes(ingest_conn, admin_conn) -> None:
     Loader(ingest_conn, info, profile="demo").load(UciSource(FIXTURE, clients=["MT_124"]))
     report = Loader(ingest_conn, info, profile="demo").load(UciSource(FIXTURE, clients=["MT_131"]))
     assert report.units_loaded == 3
+
+
+def test_cenace_reanudar_no_vuelve_a_llamar_al_servicio(ingest_conn, admin_conn) -> None:
+    import json
+    from datetime import date
+
+    from energy_lab_ingest.sources.cenace import CenaceClient, CenaceSource
+
+    reset(admin_conn)
+    payload = json.loads((FIXTURE.parent / "cenace" / "pend_sin_mda_2zonas_7dias.json").read_text())
+    calls: list[str] = []
+
+    def transport(url: str) -> dict:
+        calls.append(url)
+        return payload
+
+    def source() -> CenaceSource:
+        return CenaceSource(
+            service="pend",
+            system="SIN",
+            process="MDA",
+            keys=["OAXACA", "PUEBLA"],
+            start=date(2024, 1, 1),
+            end=date(2024, 1, 7),
+            client=CenaceClient(transport=transport, delay_s=0),
+        )
+
+    info = source().dataset_info(version="test")
+    first = Loader(ingest_conn, info, profile="smoke").load(source())
+    assert first.rows_loaded == 2 * 168 * 4
+    assert len(calls) == 1
+    second = Loader(ingest_conn, info, profile="smoke").load(source())
+    assert second.units_skipped == 1
+    assert len(calls) == 1

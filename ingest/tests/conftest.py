@@ -22,11 +22,28 @@ ROLE_PASSWORDS = {
 }
 
 
+def _refuse_shared_cluster(dsn: str) -> None:
+    """Las pruebas fijan contraseñas aleatorias a los roles lab_*, que son
+    globales al clúster. Si el clúster ya tiene la base energy_lab, es de
+    desarrollo y sus credenciales se romperían."""
+    if os.environ.get("ENERGY_LAB_TEST_ALLOW_SHARED") == "1":
+        return
+    with psycopg.connect(dsn, autocommit=True) as conn:
+        if conn.execute("SELECT 1 FROM pg_database WHERE datname = 'energy_lab'").fetchone():
+            pytest.exit(
+                "El clúster de ENERGY_LAB_TEST_ADMIN_DSN tiene la base energy_lab: usa un PostgreSQL "
+                "solo para pruebas (las pruebas cambian las contraseñas de los roles lab_*). "
+                "ENERGY_LAB_TEST_ALLOW_SHARED=1 lo permite bajo tu responsabilidad.",
+                returncode=2,
+            )
+
+
 @pytest.fixture(scope="session")
 def admin_dsn() -> str:
     dsn = os.environ.get(ADMIN_DSN_ENV)
     if not dsn:
         pytest.skip(f"{ADMIN_DSN_ENV} no está definida")
+    _refuse_shared_cluster(dsn)
     return dsn
 
 

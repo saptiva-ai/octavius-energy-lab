@@ -54,3 +54,12 @@ def test_extract_member_ignora_rutas_del_zip(tmp_path: Path) -> None:
     out = extract_member(archive, "carpeta/LD.txt", tmp_path / "ext")
     assert out == tmp_path / "ext" / "LD.txt"
     assert out.read_text() == "hola"
+
+
+def test_cenace_smoke_no_requiere_red_ni_catalogo(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("ENERGY_LAB_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("LAB_INGEST_DSN", raising=False)
+    # Sin DSN termina antes de cargar, pero ya armó la fuente sin red ni descargas.
+    with pytest.raises(SystemExit, match="LAB_INGEST_DSN"):
+        main(["cenace", "--profile", "smoke"])
+    assert not any(tmp_path.iterdir())

@@ -63,3 +63,58 @@ Perfil `demo`, 20 clientes, 2013-2014, PostgreSQL 15 en Docker local, 2026-11-10
 | Segunda corrida | 0 unidades cargadas, 24 saltadas |
 
 El perfil `full` estima 51.9 millones de filas y unos 4.9 GB en disco. Ese número todavía no está medido.
+
+## CENACE: precios del Mercado Eléctrico Mayorista
+
+| Servicio | Contenido | Entidad |
+|---|---|---|
+| SW-PEND (`--service pend`, por omisión) | Precio de nodos distribuidos por zona de carga | `load_zone` |
+| SW-PML (`--service pml`) | Precio marginal local por nodo | `node` |
+
+Cada clave genera cuatro series horarias en MXN/MWh: `price` (total), `price_energy`, `price_losses` y `price_congestion`, separadas por sistema (SIN, BCA, BCS) y proceso (MDA, MTR).
+
+**Licencia:** CENACE no publica términos de uso explícitos para estos servicios. Por eso el repositorio **no redistribuye datos crudos**: el conector los descarga en cada instalación. Los fixtures de `fixtures/cenace/` tienen la estructura real de las respuestas con **valores sintéticos**.
+
+### Comportamiento del servicio, verificado el 2026-11-10
+
+| Hecho | Tratamiento |
+|---|---|
+| Máximo 7 días por consulta; `{"Message": ...}` con HTTP 200 si se excede | Ventanas de 7 días; el mensaje se convierte en error |
+| Máximo 20 claves y, en la práctica, unos 100 caracteres en el segmento de claves: 20 zonas con nombres largos dan HTTP 400 | Bloques por cantidad y por longitud |
+| Zonas con espacios se piden con guiones (`CENTRO-ORIENTE`), pero la respuesta trae `CENTRO ORIENTE` | Normalización de la clave en ambos sentidos; las 108 zonas del catálogo responden |
+| `hora` 1-24 local; los días de cambio de horario traen 23 o 25 horas | `ts` = medianoche local + (hora - 1), en UTC, inicio del intervalo |
+| Clave sin datos: `ZERO_RESULTS` o `Valores` vacío dentro de un `OK` | `quality.keys_without_data` |
+| Datos MDA desde el 2016-01-29 (SIN); antes, respuesta vacía | Inicio por omisión del perfil full |
+
+Los meses ya cargados se saltan **sin llamar al servicio**. Entre llamadas hay una pausa de 1 s (`--delay`).
+
+### Catálogo de Nodos P
+
+Los perfiles `demo` y `full` descargan el catálogo oficial versionado (v2026-10-23, sha256 fijado) y cargan a `core.entity`:
+
+- 2,611 nodos y 108 zonas.
+- Atributos: centro de control, entidades federativas y tensión.
+- Cohortes `system` y `ccr`.
+
+El demo elige `--per-ccr` zonas por centro de control, repartidas dentro de cada uno, para no concentrar la muestra en una región.
+
+```bash
+make cenace-smoke
+make cenace-demo CENACE_PER_CCR=2 CENACE_START=2025-01-01 CENACE_END=2025-12-31
+make cenace-full          # estimación: 101 zonas del SIN desde 2016, ~38 millones de filas, ~6,200 llamadas
+```
+
+### Resultados medidos
+
+Demo con 1 zona por CCR (7 zonas), septiembre-octubre de 2025, MDA:
+
+| Medida | Valor |
+|---|---|
+| Filas cargadas | 40,992 (7 zonas × 1,464 horas × 4 componentes, sin huecos) |
+| Llamadas | 10, en 39 s |
+| Segunda corrida | 0 llamadas, 2 meses saltados |
+| Horas con precio total negativo | 5 en septiembre, 17 en octubre |
+
+### Pendiente
+
+La **demanda** (estimación de demanda real por balance o por retiros) no tiene servicio web. Solo existe un formulario ASP.NET con postbacks (`EstimacionDemandaReal.aspx`), así que queda para un PR aparte.

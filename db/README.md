@@ -54,3 +54,5 @@ ENERGY_LAB_TEST_ADMIN_DSN=postgresql://postgres:pgtest@127.0.0.1:55432/postgres 
 ```
 
 Sin `ENERGY_LAB_TEST_ADMIN_DSN`, las pruebas que necesitan base se saltan.
+
+Usa un PostgreSQL solo para pruebas: los roles `lab_*` son globales al clúster y las pruebas les fijan contraseñas aleatorias. Si el clúster ya tiene la base `energy_lab`, las pruebas se detienen (`ENERGY_LAB_TEST_ALLOW_SHARED=1` lo permite).
