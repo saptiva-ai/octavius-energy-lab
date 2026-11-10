@@ -49,6 +49,11 @@ def test_carga_smoke_cuadra_conteos(ingest_conn, admin_conn) -> None:
     assert admin_conn.execute("SELECT count(*) FROM core.observation_default").fetchone()[0] == 0
     estados = admin_conn.execute("SELECT DISTINCT status FROM core.ingest_batch").fetchall()
     assert estados == [("done",)]
+    # La duración se mide con el reloj, no con la hora de inicio de la transacción.
+    sin_duracion = admin_conn.execute(
+        "SELECT count(*) FROM core.ingest_batch WHERE finished_at <= started_at"
+    ).fetchone()[0]
+    assert sin_duracion == 0
 
 
 def test_segunda_corrida_no_recarga(ingest_conn, admin_conn) -> None:

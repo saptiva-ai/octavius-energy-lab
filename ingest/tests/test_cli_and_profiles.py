@@ -63,3 +63,11 @@ def test_cenace_smoke_no_requiere_red_ni_catalogo(monkeypatch, tmp_path) -> None
     with pytest.raises(SystemExit, match="LAB_INGEST_DSN"):
         main(["cenace", "--profile", "smoke"])
     assert not any(tmp_path.iterdir())
+
+
+def test_lcl_full_sin_aprobacion_se_detiene(capsys, monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("ENERGY_LAB_DATA_DIR", str(tmp_path))
+    assert main(["lcl", "--profile", "full"]) == EXIT_NEEDS_APPROVAL
+    out = capsys.readouterr().out
+    assert "filas estimadas: 168,000,000" in out
+    assert not any(tmp_path.iterdir())
