@@ -57,7 +57,9 @@ def _documents(ontology: Ontology) -> list[dict]:
                     "table": column.column.rsplit(".", 1)[0],
                     "column": column.column,
                     "kind": "column",
-                    "text": f"{term.name} · {column.name} ({physical}, {column.column}): {column.description}",
+                    "text": (
+                        f"{term.name} · {column.name} ({physical}, {column.column}): {column.description}"
+                    ),
                 }
             )
     return docs
