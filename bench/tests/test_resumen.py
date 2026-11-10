@@ -44,3 +44,15 @@ def test_resumen_en_espanol_con_interpretacion() -> None:
 def test_resumen_sin_antipatron_no_inventa_comparaciones() -> None:
     reporte = {**REPORTE, "queries": REPORTE["queries"][:1]}
     assert "veces más lenta" not in resumen_markdown(reporte)
+
+
+def test_nota_de_cenace_solo_si_hay_cenace() -> None:
+    assert "servicio web" not in resumen_markdown(REPORTE)
+    con_cenace = {
+        **REPORTE,
+        "ingest": [
+            *REPORTE["ingest"],
+            {**REPORTE["ingest"][0], "source": "cenace_pend", "rows_per_second": 2000},
+        ],
+    }
+    assert "La ingesta de CENACE incluye las llamadas al servicio web" in resumen_markdown(con_cenace)

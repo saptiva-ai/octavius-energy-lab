@@ -1,0 +1,212 @@
+{
+  "experiment": "E1",
+  "measured_at": "2026-11-10T18:16:39+00:00",
+  "host": {
+    "platform": "Linux-7.0.0-42-generic-x86_64-desconocido-with-glibc2.43",
+    "python": "3.11.15"
+  },
+  "repetitions": 20,
+  "source_filter": "lcl",
+  "postgres": "15.18",
+  "rows": {
+    "core.observation": 5322169,
+    "core.series": 184,
+    "core.entity": 2875
+  },
+  "rows_by_source": {
+    "cenace_pend": 40992,
+    "lcl": 3997127,
+    "lcl_tariff": 17520,
+    "uci_eld": 1266530
+  },
+  "partitions": {
+    "count": 42,
+    "default_rows": 0
+  },
+  "sizes": {
+    "core.ingest_batch": {
+      "table_bytes": 49152,
+      "index_bytes": 32768,
+      "total_bytes": 81920
+    },
+    "lab.run_event": {
+      "table_bytes": 8192,
+      "index_bytes": 16384,
+      "total_bytes": 24576
+    },
+    "lab.scenario": {
+      "table_bytes": 8192,
+      "index_bytes": 8192,
+      "total_bytes": 16384
+    },
+    "core.observation": {
+      "table_bytes": 322076672,
+      "index_bytes": 170516480,
+      "total_bytes": 492593152
+    },
+    "core.dataset_version": {
+      "table_bytes": 16384,
+      "index_bytes": 32768,
+      "total_bytes": 49152
+    },
+    "lab.evaluation": {
+      "table_bytes": 8192,
+      "index_bytes": 16384,
+      "total_bytes": 24576
+    },
+    "forecast.forecast_run": {
+      "table_bytes": 8192,
+      "index_bytes": 24576,
+      "total_bytes": 32768
+    },
+    "lab.harness_config": {
+      "table_bytes": 8192,
+      "index_bytes": 8192,
+      "total_bytes": 16384
+    },
+    "lab.run": {
+      "table_bytes": 8192,
+      "index_bytes": 16384,
+      "total_bytes": 24576
+    },
+    "lab.experiment": {
+      "table_bytes": 8192,
+      "index_bytes": 8192,
+      "total_bytes": 16384
+    },
+    "core.entity_cohort": {
+      "table_bytes": 286720,
+      "index_bytes": 196608,
+      "total_bytes": 483328
+    },
+    "core.cohort": {
+      "table_bytes": 16384,
+      "index_bytes": 32768,
+      "total_bytes": 49152
+    },
+    "core.series": {
+      "table_bytes": 81920,
+      "index_bytes": 65536,
+      "total_bytes": 147456
+    },
+    "forecast.forecast_point": {
+      "table_bytes": 8192,
+      "index_bytes": 8192,
+      "total_bytes": 16384
+    },
+    "core.entity": {
+      "table_bytes": 704512,
+      "index_bytes": 303104,
+      "total_bytes": 1007616
+    }
+  },
+  "bytes_per_row": 92.6,
+  "ingest": [
+    {
+      "source": "cenace_pend",
+      "profile": "demo",
+      "batches": 2,
+      "rows_loaded": 40992,
+      "seconds": 19.59,
+      "rows_per_second": 2092
+    },
+    {
+      "source": "lcl",
+      "profile": "demo",
+      "batches": 4,
+      "rows_loaded": 3997127,
+      "seconds": 79.74,
+      "rows_per_second": 50130
+    },
+    {
+      "source": "lcl_tariff",
+      "profile": "demo",
+      "batches": 1,
+      "rows_loaded": 17520,
+      "seconds": 0.38,
+      "rows_per_second": 46569
+    },
+    {
+      "source": "uci_eld",
+      "profile": "demo",
+      "batches": 24,
+      "rows_loaded": 1266530,
+      "seconds": 47.99,
+      "rows_per_second": 26390
+    }
+  ],
+  "query_params": {
+    "series_id": 119,
+    "end": "2014-02-28T00:00:00+00:00",
+    "week_start": "2014-02-21T00:00:00+00:00",
+    "month_start": "2014-01-29T00:00:00+00:00"
+  },
+  "queries": [
+    {
+      "name": "series_window",
+      "description": "Promedio horario de una serie en una ventana de 7 días (contexto para un pronóstico)",
+      "antipattern": false,
+      "compare_with": null,
+      "repetitions": 20,
+      "rows_returned": 168,
+      "p50_ms": 0.406,
+      "p95_ms": 2.047,
+      "partitions_scanned": 1
+    },
+    {
+      "name": "series_window_antipattern",
+      "description": "La misma ventana filtrando por date_trunc(ts): mismo resultado, sin poda de particiones",
+      "antipattern": true,
+      "compare_with": "series_window",
+      "repetitions": 20,
+      "rows_returned": 168,
+      "p50_ms": 4.745,
+      "p95_ms": 5.042,
+      "partitions_scanned": 42
+    },
+    {
+      "name": "top_series_last_week",
+      "description": "Series con mayor consumo total en la última semana observada",
+      "antipattern": false,
+      "compare_with": null,
+      "repetitions": 20,
+      "rows_returned": 10,
+      "p50_ms": 16.257,
+      "p95_ms": 17.025,
+      "partitions_scanned": 1
+    },
+    {
+      "name": "daily_by_cohort_month",
+      "description": "Agregado diario por cohorte en el último mes (comparación entre grupos)",
+      "antipattern": false,
+      "compare_with": null,
+      "repetitions": 20,
+      "rows_returned": 90,
+      "p50_ms": 50.004,
+      "p95_ms": 51.215,
+      "partitions_scanned": 2
+    },
+    {
+      "name": "forecast_context",
+      "description": "Últimos 2,048 puntos de una serie antes del corte (entrada típica de TimesFM)",
+      "antipattern": false,
+      "compare_with": null,
+      "repetitions": 20,
+      "rows_returned": 2048,
+      "p50_ms": 1.444,
+      "p95_ms": 1.851,
+      "partitions_scanned": 29
+    },
+    {
+      "name": "series_full_history_count",
+      "description": "Conteo de la historia completa de una serie (recorre todas las particiones)",
+      "antipattern": false,
+      "compare_with": null,
+      "repetitions": 20,
+      "rows_returned": 1,
+      "p50_ms": 2.609,
+      "p95_ms": 2.867,
+      "partitions_scanned": 42
+    }
+  ]
+}

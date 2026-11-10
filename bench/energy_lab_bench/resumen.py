@@ -75,4 +75,9 @@ def resumen_markdown(r: dict) -> str:
         "- Son medidas de una sola máquina y una sola corrida; no se comparan entre equipos.",
         "- Las latencias excluyen la red y el modelo de lenguaje: miden solo PostgreSQL.",
     ]
+    if any(i["source"].startswith("cenace") for i in r["ingest"]):
+        lineas.append(
+            "- La ingesta de CENACE incluye las llamadas al servicio web y la pausa entre ellas; "
+            "su throughput no mide PostgreSQL."
+        )
     return "\n".join(lineas) + "\n"
