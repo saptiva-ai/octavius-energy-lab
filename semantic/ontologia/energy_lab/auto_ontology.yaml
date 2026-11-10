@@ -1,0 +1,596 @@
+data_layer:
+  databases:
+  - id: ff59a784-9fce-4ca3-b901-d6c660051dc4
+    dialect: postgres
+    schemas:
+    - id: d3ab2df3-a367-4d8d-bd3b-5ff685bbd2b3
+      name: agg
+      database_name: energy_lab
+      tables:
+      - id: 8ce84dbb-6d7c-469c-a58e-39798deb203d
+        name: consumo_cliente_cuarto_hora
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: 5debcc7d-d4cd-4b94-b1fc-8edd14ecbd4e
+          name: cliente
+          description: ''
+          type: text
+          sample_values:
+          - MT_001
+          - MT_019
+          - MT_038
+          - MT_056
+          - MT_075
+          - MT_093
+          - MT_112
+          - MT_130
+          - MT_149
+          - MT_167
+          - MT_186
+          - MT_204
+          - MT_241
+          - MT_260
+          - MT_278
+          - MT_297
+          - MT_315
+          - MT_334
+          - MT_352
+          is_nullable: true
+          is_unique: false
+        - id: c0934e46-6225-4657-87ed-24a8626d7ebc
+          name: momento
+          description: ''
+          type: timestamp with time zone
+          sample_values: []
+          is_nullable: true
+          is_unique: true
+        - id: 89bdb654-02c7-4fad-98c4-4caf2b59baf9
+          name: potencia_kw
+          description: ''
+          type: double precision
+          sample_values:
+          - 2.53807106598985
+          - 1.26903553299492
+          - 3.80710659898477
+          - 15.2284263959391
+          - 5.0761421319797
+          is_nullable: true
+          is_unique: false
+      - id: b0538ebe-cc7b-4e87-b5c1-5b620b5adc65
+        name: consumo_hogar_diario
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: e0d6f71a-73c2-4a25-bed9-fcce4225b4b1
+          name: hogar
+          description: ''
+          type: text
+          sample_values:
+          - MAC000002
+          - MAC000003
+          is_nullable: true
+          is_unique: false
+        - id: c84b0169-d0db-435a-98b8-47af81c3cc66
+          name: grupo_tarifa
+          description: ''
+          type: text
+          sample_values:
+          - Std
+          - ToU
+          is_nullable: true
+          is_unique: false
+        - id: 19ff229f-1dd8-4966-a08c-69fc57980339
+          name: dia
+          description: ''
+          type: date
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: 06c132cf-a519-4161-aad6-92b1c6bc5592
+          name: consumo_kwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 10.699000000000002
+          - 11.157000000000002
+          - 10.074
+          - 9.384
+          - 14.340999999999996
+          is_nullable: true
+          is_unique: false
+        - id: 54c30589-126b-46a7-bb05-39cfa76420d3
+          name: lecturas
+          description: ''
+          type: bigint
+          sample_values:
+          - 48
+          - 47
+          - 1
+          - 46
+          - 22
+          is_nullable: true
+          is_unique: false
+      - id: de9e4387-5d3f-490c-b7a6-3a006512cf6c
+        name: consumo_hogar_media_hora
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: 0445b111-7c9c-41dd-85f6-db59397d1972
+          name: hogar
+          description: ''
+          type: text
+          sample_values:
+          - MAC000165
+          - MAC000147
+          - MAC000170
+          - MAC000186
+          is_nullable: true
+          is_unique: false
+        - id: 95190197-1091-4185-9a86-959429f2c5ab
+          name: grupo_tarifa
+          description: ''
+          type: text
+          sample_values:
+          - ToU
+          - Std
+          is_nullable: true
+          is_unique: false
+        - id: 913fbf3d-7a99-463f-9c30-fb4a36c02a75
+          name: momento
+          description: ''
+          type: timestamp with time zone
+          sample_values: []
+          is_nullable: true
+          is_unique: false
+        - id: abdedbd7-968f-4365-bfb6-958b0d69b74c
+          name: consumo_kwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 0.062
+          - 0.058
+          - 0.063
+          - 0.061
+          - 0.066
+          is_nullable: true
+          is_unique: false
+      - id: c24aeaf0-c48a-41b9-9189-6de4c88c8e48
+        name: hogares
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: 4614b0ff-070f-42a3-9f0d-6e6fda09173f
+          name: hogar
+          description: ''
+          type: text
+          sample_values:
+          - MAC000002
+          - MAC000003
+          - MAC000004
+          - MAC000006
+          - MAC000007
+          is_nullable: true
+          is_unique: true
+        - id: 7a46139c-ff73-46c3-a021-d13a50da6da5
+          name: grupo_tarifa
+          description: ''
+          type: text
+          sample_values:
+          - Std
+          - ToU
+          is_nullable: true
+          is_unique: false
+      - id: f0566515-f6dc-4af2-ba96-559039c2cda3
+        name: precio_zona_hora
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: 408707ff-f70c-41e0-99e8-4072f1ca668a
+          name: zona_carga
+          description: ''
+          type: text
+          sample_values:
+          - ACAPULCO
+          - AGUASCALIENTES
+          - CABORCA
+          - CAMARGO
+          - CAMPECHE
+          - CENTRO-ORIENTE
+          - HUASTECA
+          is_nullable: true
+          is_unique: false
+        - id: b6a4b95a-9eaf-4d21-9228-253ab4e62027
+          name: sistema
+          description: ''
+          type: text
+          sample_values:
+          - SIN
+          is_nullable: true
+          is_unique: false
+        - id: 300733d0-c587-4ace-973d-3b4a1b49e851
+          name: proceso
+          description: ''
+          type: text
+          sample_values:
+          - MDA
+          is_nullable: true
+          is_unique: false
+        - id: 3ff6da65-ab5b-4c13-81b5-9175c58c5b81
+          name: centro_control
+          description: ''
+          type: text
+          sample_values:
+          - ORIENTAL
+          - NORTE
+          - NOROESTE
+          - CENTRAL
+          - OCCIDENTAL
+          - PENINSULAR
+          - NORESTE
+          is_nullable: true
+          is_unique: false
+        - id: c6a9e23d-604c-4cd2-9390-42facec7916b
+          name: momento
+          description: ''
+          type: timestamp with time zone
+          sample_values: []
+          is_nullable: true
+          is_unique: true
+        - id: dfddacd4-df84-4571-82ac-f071c4289ab8
+          name: precio_total_mxn_mwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 588.9
+          - 501.46
+          - 723.97
+          - 530.69
+          - 538.78
+          is_nullable: true
+          is_unique: false
+        - id: 1ed73fbe-047b-4afb-a76f-385ff313fd6e
+          name: componente_energia_mxn_mwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 518.5
+          - 456.45
+          - 497.74
+          - 510.42
+          - 482.55
+          is_nullable: true
+          is_unique: false
+        - id: 37e84348-98a6-4974-a0bd-254d41d19dbc
+          name: componente_perdidas_mxn_mwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 58.04
+          - 50.67
+          - 46.22
+          - 54.69
+          - 47.52
+          is_nullable: true
+          is_unique: false
+        - id: 5098171a-c58a-4ab7-bb7b-f07c95788fdc
+          name: componente_congestion_mxn_mwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 0.0
+          - -0.01
+          - 0.03
+          - 0.05
+          - 0.06
+          is_nullable: true
+          is_unique: false
+      - id: ca1ee549-2345-44f1-9581-bf6d8bb54b89
+        name: tarifa_dinamica
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: a4d4237a-28ad-482a-a034-cc152e6959bd
+          name: momento
+          description: ''
+          type: timestamp with time zone
+          sample_values: []
+          is_nullable: true
+          is_unique: true
+        - id: 319df546-c5fe-4618-90c3-aaa7da3eae88
+          name: banda
+          description: ''
+          type: text
+          sample_values:
+          - Normal
+          - Baja
+          - Alta
+          is_nullable: true
+          is_unique: false
+        - id: aa49db16-f46a-4c5b-8b48-a67d6600b52b
+          name: precio_p_kwh
+          description: ''
+          type: double precision
+          sample_values:
+          - 11.76
+          - 3.99
+          - 67.2
+          is_nullable: true
+          is_unique: false
+      - id: 39a341c3-2a77-486c-9f84-143a06bcf2ac
+        name: zonas_carga
+        description: ''
+        pk: []
+        type: view
+        columns:
+        - id: 78011088-d56d-4338-a125-be27777fa52a
+          name: zona_carga
+          description: ''
+          type: text
+          sample_values:
+          - ENSENADA
+          - MEXICALI
+          - SANLUIS
+          - TIJUANA
+          - CONSTITUCION
+          is_nullable: true
+          is_unique: true
+        - id: 30b8784b-8043-4613-a836-32d82b8757b3
+          name: sistema
+          description: ''
+          type: text
+          sample_values:
+          - SIN
+          - BCA
+          - BCS
+          is_nullable: true
+          is_unique: false
+        - id: 41c24f44-6099-4e80-a530-f2f99fff3382
+          name: centro_control
+          description: ''
+          type: text
+          sample_values:
+          - ORIENTAL
+          - OCCIDENTAL
+          - NORESTE
+          - NOROESTE
+          - PENINSULAR
+          is_nullable: true
+          is_unique: false
+        - id: d6fb38cf-9bca-478f-ba96-c2e65b462356
+          name: estados
+          description: ''
+          type: text
+          sample_values:
+          - SONORA
+          - JALISCO
+          - MICHOACAN DE OCAMPO
+          - GUERRERO
+          - CHIHUAHUA
+          is_nullable: true
+          is_unique: false
+        - id: a5a402b1-b16f-4660-8c6a-972aaa3e623e
+          name: nodos
+          description: ''
+          type: integer
+          sample_values:
+          - 12
+          - 20
+          - 10
+          - 37
+          - 8
+          is_nullable: true
+          is_unique: false
+  foreign_keys: []
+  joins: []
+semantic_layer:
+  terms:
+  - id: 551c1810-94b2-4507-8751-8f352944d2d8
+    name: Consumo Cliente Cuarto Hora
+    description: Tracks power consumption and generation events for customers at quarter-hour
+      intervals.
+    represents:
+    - 8ce84dbb-6d7c-469c-a58e-39798deb203d
+    columns_attributes:
+    - id: 9768ba4e-d4d3-42a4-90e2-e274c88ce1b9
+      name: Customer Code
+      description: Identifies the customer associated with the record using a unique
+        alphanumeric code.
+      column_id: 5debcc7d-d4cd-4b94-b1fc-8edd14ecbd4e
+    - id: b2a5aabf-5bdf-4cc8-9831-52985b3a3ae1
+      name: Power K W
+      description: Measures the power consumption or generation in kilowatts at the
+        moment of the event.
+      column_id: 89bdb654-02c7-4fad-98c4-4caf2b59baf9
+    - id: e9769ab9-f2ca-4e00-b905-291f8596e643
+      name: Timestamp UTC
+      description: Records the exact date and time of the event in Coordinated Universal
+        Time.
+      column_id: c0934e46-6225-4657-87ed-24a8626d7ebc
+  - id: 57c6b5f9-75a1-4faf-88d8-466516c6dd02
+    name: Hogar
+    description: A residential household entity.
+    represents:
+    - c24aeaf0-c48a-41b9-9189-6de4c88c8e48
+    columns_attributes:
+    - id: 21f6c92d-68df-474b-92cc-0d9719c39315
+      name: Home ID
+      description: A unique identifier for a residential household, represented as
+        a text code such as MAC000002.
+      column_id: 4614b0ff-070f-42a3-9f0d-6e6fda09173f
+    - id: 47275c28-1b09-4fb5-9bad-565a09857755
+      name: Rate Group
+      description: The rate group classification for a customer, with values such
+        as Std (standard) or ToU (time-of-use).
+      column_id: 7a46139c-ff73-46c3-a021-d13a50da6da5
+  - id: 15a7661d-c425-45b8-a43a-a43239d6fe9e
+    name: Home Daily Consumption
+    description: Daily energy consumption records for residential customers.
+    represents:
+    - b0538ebe-cc7b-4e87-b5c1-5b620b5adc65
+    columns_attributes:
+    - id: 0960b018-785b-49b8-b084-ca195c23caf5
+      name: Home Account ID
+      description: A unique identifier for a residential customer account.
+      column_id: e0d6f71a-73c2-4a25-bed9-fcce4225b4b1
+    - id: 50497861-4dba-469c-82bb-19ddb80b4403
+      name: Consumption Date
+      description: "The date associated with the energy consumption record. \u2014\
+        \ format: YYYY-MM-DD"
+      column_id: 19ff229f-1dd8-4966-a08c-69fc57980339
+    - id: 5e6758e0-dcf6-40d0-aaa1-a97af14ada37
+      name: Meter Readings Count
+      description: The number of meter readings recorded for the given period.
+      column_id: 54c30589-126b-46a7-bb05-39cfa76420d3
+    - id: 6a26c6bd-8daa-4b3b-b561-15f2574986a7
+      name: consumoKwh
+      description: The total electrical energy consumed measured in kilowatt-hours.
+      column_id: 06c132cf-a519-4161-aad6-92b1c6bc5592
+    - id: 982f26bd-5c44-4d69-b807-2ad56b4de6af
+      name: Rate Plan Group
+      description: The rate plan classification applied to the customer's electricity
+        consumption.
+      column_id: c84b0169-d0db-435a-98b8-47af81c3cc66
+  - id: 2ea0e684-f1d4-4a4c-8ebe-364fd59692de
+    name: Home Energy Consumption
+    description: Tracks residential energy consumption metrics over time.
+    represents:
+    - de9e4387-5d3f-490c-b7a6-3a006512cf6c
+    columns_attributes:
+    - id: 1993e0db-6be2-48c6-8b40-bc585900be6b
+      name: Rate Plan Group
+      description: Classifies the customer into a specific rate plan category, such
+        as Time-of-Use or Standard.
+      column_id: 95190197-1091-4185-9a86-959429f2c5ab
+    - id: 8c991098-2242-4067-b07b-7bc797122608
+      name: consumoKwh
+      description: Measures the amount of electrical energy consumed in kilowatt-hours
+        during the recorded period.
+      column_id: abdedbd7-968f-4365-bfb6-958b0d69b74c
+    - id: 93a0a845-6260-48d7-86f8-8efcfcb7753c
+      name: Home Account
+      description: Identifies the residential customer account associated with the
+        energy consumption record.
+      column_id: 0445b111-7c9c-41dd-85f6-db59397d1972
+    - id: a3babb44-0164-4a41-85b5-40e01feebe0e
+      name: Measurement Timestamp
+      description: Records the exact date and time when the energy consumption measurement
+        was taken.
+      column_id: 913fbf3d-7a99-463f-9c30-fb4a36c02a75
+  - id: 22124e57-d146-411c-91f2-42790f437c1c
+    name: Load Zone
+    description: Represents a geographic load zone within an electrical system.
+    represents:
+    - 39a341c3-2a77-486c-9f84-143a06bcf2ac
+    columns_attributes:
+    - id: 23f731a9-0b87-4dec-8e5f-56590a217e97
+      name: Control Center Region
+      description: Denotes the control center region, including ORIENTAL, OCCIDENTAL,
+        NORESTE, NOROESTE, or PENINSULAR.
+      column_id: 41c24f44-6099-4e80-a530-f2f99fff3382
+    - id: 55335cbb-33e5-4178-9ebc-b7ef87170961
+      name: Load Zone Name
+      description: Identifies the geographic load zone associated with the power system,
+        such as ENSENADA or TIJUANA.
+      column_id: 78011088-d56d-4338-a125-be27777fa52a
+    - id: 8c085e87-8f0c-4cfc-9c29-92d68241d454
+      name: Node Count
+      description: Represents the count of grid nodes, with sample values ranging
+        from 8 to 37.
+      column_id: a5a402b1-b16f-4660-8c6a-972aaa3e623e
+    - id: 9b1006fc-094a-4335-9945-07d8e41f8693
+      name: Covered States
+      description: Lists the Mexican states covered by the dataset, such as SONORA,
+        JALISCO, or CHIHUAHUA.
+      column_id: d6fb38cf-9bca-478f-ba96-c2e65b462356
+    - id: f19f5ad4-3a34-46b8-a4e8-a3bf5413fcdb
+      name: Electrical System Code
+      description: Specifies the electrical system code, for example SIN, BCA, or
+        BCS.
+      column_id: 30b8784b-8043-4613-a836-32d82b8757b3
+  - id: c5233e26-c07b-4dce-af39-4f96a59b4437
+    name: Precio Zona Hora
+    description: Electricity pricing data for specific load zones and times within
+      a power system.
+    represents:
+    - f0566515-f6dc-4af2-ba96-559039c2cda3
+    columns_attributes:
+    - id: 3e58bace-9951-43ba-9099-f0f50dbb3882
+      name: Control Center Region
+      description: Indicates the control center region (e.g., ORIENTAL, NOROESTE)
+        responsible for grid management.
+      column_id: 3ff6da65-ab5b-4c13-81b5-9175c58c5b81
+    - id: 531077ce-3663-48f7-bc25-18b192d89e3a
+      name: Load Zone
+      description: Identifies the specific load zone (e.g., ACAPULCO, CAMPECHE) where
+        electricity demand is measured within the power system.
+      column_id: 408707ff-f70c-41e0-99e8-4072f1ca668a
+    - id: 90fe1480-402b-4fbc-827b-174df734ef7e
+      name: precioTotalMxnMwh
+      description: Represents the total electricity price in Mexican pesos per megawatt-hour
+        for the given zone and time.
+      column_id: dfddacd4-df84-4571-82ac-f071c4289ab8
+    - id: 92a165ab-f4c1-4420-8d04-98523dede365
+      name: componentePerdidasMxnMwh
+      description: Captures the losses component price in Mexican pesos per megawatt-hour
+        due to transmission inefficiencies.
+      column_id: 37e84348-98a6-4974-a0bd-254d41d19dbc
+    - id: 97d5de0e-7da4-4d96-a606-6b44f385d5da
+      name: componenteCongestionMxnMwh
+      description: Reflects the congestion component price in Mexican pesos per megawatt-hour
+        for grid constraint management.
+      column_id: 5098171a-c58a-4ab7-bb7b-f07c95788fdc
+    - id: e5ccee28-2d35-40e0-b888-5f357ca2bb67
+      name: Timestamp
+      description: Records the exact timestamp with time zone when the price data
+        was captured.
+      column_id: c6a9e23d-604c-4cd2-9390-42facec7916b
+    - id: ecad022a-233a-4a60-bb4e-66edc728a670
+      name: System
+      description: Specifies the electrical grid system (e.g., SIN) to which the transaction
+        belongs.
+      column_id: b6a4b95a-9eaf-4d21-9228-253ab4e62027
+    - id: ed74ff10-f8ec-4506-afeb-05decb86a8f4
+      name: componenteEnergiaMxnMwh
+      description: Shows the energy component price in Mexican pesos per megawatt-hour,
+        excluding losses and congestion.
+      column_id: 1ed73fbe-047b-4afb-a76f-385ff313fd6e
+    - id: fafe091e-1154-4120-9083-95388d4ea08d
+      name: Process Code
+      description: Denotes the operational process code (e.g., MDA) associated with
+        the pricing event.
+      column_id: 300733d0-c587-4ace-973d-3b4a1b49e851
+  - id: 4f8203d1-ae52-4bc8-a370-f56a05e297ec
+    name: Tarifa Dinamica
+    description: Dynamic energy pricing record
+    represents:
+    - ca1ee549-2345-44f1-9581-bf6d8bb54b89
+    columns_attributes:
+    - id: b1805549-97db-4fb0-aa97-9a2680abafe1
+      name: Energy Band
+      description: Text label categorizing the energy band as Normal, Baja, or Alta.
+      column_id: 319df546-c5fe-4618-90c3-aaa7da3eae88
+    - id: d0b52113-f177-4f4c-8453-669f9a7af5c7
+      name: Price Per K Wh
+      description: Electricity price per kilowatt-hour in double precision format.
+      column_id: aa49db16-f46a-4c5b-8b48-a67d6600b52b
+    - id: fdfcfbeb-151f-4bde-90d5-0fa7ca36662d
+      name: Timestamp Moment
+      description: Timestamp indicating when the energy price measurement was recorded
+        in UTC.
+      column_id: a4d4237a-28ad-482a-a034-cc152e6959bd
+  semantic_fks: []
+  sql_attributes:
+    manual: []
+    table: []
+    sql: []
+    bridge_table: []
+  custom_analyses: []
+zones: []
+
