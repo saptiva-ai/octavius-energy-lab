@@ -13,7 +13,7 @@ COMPOSE = docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) --env-file $(ENV_F
 BACKEND_DIR := apps/backend
 T ?= api
 
-.PHONY: help env dev up down logs ps test test-api test-web test-db test-ingest lint lint-api lint-web lint-db lint-ingest db-up db-migrate db-status ingest-smoke ingest-demo ingest-full
+.PHONY: help env dev up down logs ps test test-api test-web test-db test-ingest lint lint-api lint-web lint-db lint-ingest db-up db-migrate db-status ingest-smoke ingest-demo ingest-full cenace-smoke cenace-demo cenace-full
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -101,3 +101,16 @@ test-ingest: ## Pruebas de ingest/ (las de carga requieren ENERGY_LAB_TEST_ADMIN
 
 lint-ingest: ## Ruff sobre ingest/
 	cd $(INGEST_DIR) && uvx ruff==0.16.5 check . && uvx ruff==0.16.5 format --check .
+
+CENACE_PER_CCR ?= 2
+CENACE_START ?= 2025-01-01
+CENACE_END ?= 2025-12-31
+
+cenace-smoke: ## Carga el fixture de CENACE (estructura real, valores sintéticos; sin red)
+	$(INGEST_RUN) python -m energy_lab_ingest cenace --profile smoke
+
+cenace-demo: ## Precios por zona: CENACE_PER_CCR zonas por centro de control entre CENACE_START y CENACE_END
+	$(INGEST_RUN) python -m energy_lab_ingest cenace --profile demo --per-ccr $(CENACE_PER_CCR) --start $(CENACE_START) --end $(CENACE_END)
+
+cenace-full: ## Estimación de todas las zonas del SIN desde 2016; YES=1 para cargar
+	$(INGEST_RUN) python -m energy_lab_ingest cenace --profile full $(if $(filter 1,$(YES)),--yes,)

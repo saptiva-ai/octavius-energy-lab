@@ -1,0 +1,13 @@
+{
+  "status": "ZERO_RESULTS",
+  "nombre": "PEND",
+  "proceso": "MDA",
+  "sistema": "SIN",
+  "area": "PÚBLICA",
+  "Resultados": [
+    {
+      "zona_carga": "NOEXISTE",
+      "Valores": []
+    }
+  ]
+}
