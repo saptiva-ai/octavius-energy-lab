@@ -21,6 +21,7 @@
 |---|---|---|
 | `auto_ontology.yaml` | Nativo de Auto Ontology | Capa de datos (bases, tablas, columnas, perfiles) y capa semántica (términos, atributos de columna, relaciones, atributos SQL) |
 | `ossie.yaml` | [Apache Ossie](https://ossie.apache.org/) | El modelo semántico en el estándar abierto |
+| `correcciones.yaml` | Propio del plugin `semantic-adapter` | Correcciones humanas con llave física: nombres, descripciones, relaciones y medidas |
 
 ## Resultado
 
@@ -40,10 +41,14 @@ Se compiló dos veces sobre las mismas vistas. La primera, con el conector origi
 
 La afirmación inventada ("generación") desaparece y las descripciones quedan en español. Documentar la base es la forma más barata de mejorar la ontología.
 
-## Lo que hay que corregir antes de certificar
+## Correcciones propuestas
 
-1. **Nombres.** "Load Zone" sigue en inglés y "Tarifa Dinamica" sin acento: el modelo elige el nombre del término y el comentario solo orienta la descripción.
-2. **Relaciones faltantes.** `hogares.hogar` y `consumo_hogar_*.hogar` son la misma llave, y `zonas_carga.zona_carga` con `precio_zona_hora.zona_carga` también. Las vistas no declaran llaves y la inferencia semántica no las detectó.
-3. **Sin atributos SQL.** Se proponen a partir del historial de consultas y no hay ninguno. Medidas como "consumo total por grupo de tarifa" o "precio promedio por centro de control" tendrían que definirse a mano.
+Los tres huecos de la compilación se atienden en `correcciones.yaml`, que el plugin aplica encima de la exportación:
+
+1. **Nombres.** "Load Zone" pasa a "Zona de carga" y "Tarifa Dinamica" a "Tarifa dinámica"; los nombres del modelo quedan como sinónimos. También se corrigen columnas sin comentario que el modelo describió mal: `tarifa_dinamica.banda` ("frequency band… signal strength") y `consumo_hogar_diario.lecturas` ("raw meter reading values", cuando es un conteo).
+2. **Relaciones.** `consumo_hogar_*.hogar` con `hogares.hogar` y `precio_zona_hora.zona_carga` con `zonas_carga.zona_carga`. Se verificaron en la base: 0 filas sin pareja.
+3. **Medidas.** Consumo total, consumo diario promedio por hogar (solo días completos), energía de clientes de Portugal, precio promedio y horas con precio negativo. Las cinco se ejecutaron en la base de desarrollo.
+
+Es una propuesta escrita a partir de la migración 0007: nadie la ha revisado, así que `certificada` sigue en `false`.
 
 Estos puntos son evidencia para la sección 4 de la charla (*The Evaluation Trap*): una capa semántica generada por un modelo también puede introducir errores, y hay que medirla, no suponer que ayuda (experimento E8).

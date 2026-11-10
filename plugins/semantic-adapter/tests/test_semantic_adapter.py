@@ -30,6 +30,95 @@ def test_term_es_insensible_a_mayusculas_y_acentos(ontology) -> None:
     assert ontology.term("no existe") is None
 
 
+# -- correcciones humanas ----------------------------------------------------------
+
+
+def test_las_correcciones_renombran_y_agregan_sinonimos(corrected) -> None:
+    zona = corrected.term("Zona de carga")
+    assert zona is not None and zona.corrected
+    assert corrected.term("load zone") is zona  # el nombre del modelo queda como sinónimo
+    banda = next(c for c in corrected.term("tarifa dinámica").columns if c.column.endswith(".banda"))
+    assert "67.20" in banda.description
+    assert corrected.term("Hogar").corrected is False
+
+
+def test_relaciones_y_medidas_quedan_ligadas_al_termino(corrected) -> None:
+    related = corrected.related(corrected.term("Hogar"))
+    assert {r["from"] for r in related["relations"]} == {
+        "agg.consumo_hogar_diario.hogar",
+        "agg.consumo_hogar_media_hora.hogar",
+    }
+    assert related["measures"] == []
+    precio = corrected.related(corrected.term("Precio Zona Hora"))
+    assert {m["name"] for m in precio["measures"]} == {"Precio promedio", "Horas con precio negativo"}
+
+
+def test_propuesta_sin_revisar_no_esta_certificada(corrected, ontology) -> None:
+    assert corrected.corrections.orphans == []
+    assert corrected.corrections.applied > 0
+    assert corrected.certified is False
+    assert corrected.version != ontology.version  # la versión cubre exportación y correcciones
+
+
+def _write(tmp_path, text: str):
+    path = tmp_path / "correcciones.yaml"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def test_certifica_quien_revisa(tmp_path) -> None:
+    from conftest import ONTOLOGY
+    from semantic_adapter.ontology import load_ontology
+
+    fixes = _write(tmp_path, "revisado_por: analista\ncertificada: true\n")
+    loaded = load_ontology(ONTOLOGY, corrections=fixes)
+    assert loaded.certified is True
+    assert loaded.summary()["corrections"]["reviewed_by"] == "analista"
+
+
+def test_correccion_huerfana_quita_la_certificacion(tmp_path) -> None:
+    from conftest import ONTOLOGY
+    from semantic_adapter.ontology import load_ontology
+
+    fixes = _write(
+        tmp_path,
+        """
+revisado_por: analista
+certificada: true
+terminos:
+  agg.vista_borrada:
+    nombre: Ya no existe
+  agg.hogares:
+    columnas:
+      agg.hogares.columna_borrada:
+        nombre: Tampoco
+relaciones:
+  - desde: agg.consumo_hogar_diario.hogar
+    hacia: agg.clientes.id
+medidas:
+  - nombre: Medida vieja
+    vista: agg.vista_borrada
+    sql: count(*)
+""",
+    )
+    loaded = load_ontology(ONTOLOGY, corrections=fixes)
+    assert loaded.certified is False
+    assert loaded.corrections.orphans == [
+        "terminos.agg.vista_borrada",
+        "terminos.agg.hogares.columnas.agg.hogares.columna_borrada",
+        "relaciones.agg.consumo_hogar_diario.hogar->agg.clientes.id",
+        "medidas.Medida vieja",
+    ]
+    assert loaded.relations == [] and loaded.measures == []
+
+
+def test_sin_archivo_de_correcciones_se_usa_la_exportacion(tmp_path) -> None:
+    from conftest import ONTOLOGY
+    from semantic_adapter.ontology import load_ontology
+
+    assert load_ontology(ONTOLOGY, corrections=tmp_path / "no-existe.yaml").corrections.applied == 0
+
+
 # -- índice ---------------------------------------------------------------------
 
 
@@ -52,6 +141,11 @@ def test_el_indice_se_cachea_por_version_y_modelo(ontology, tmp_path) -> None:
     assert second.calls == 1  # solo la consulta
     cached = list(tmp_path.glob("*.json"))
     assert len(cached) == 1 and ontology.version in cached[0].name
+
+
+def test_las_medidas_se_indexan(corrected, embedder) -> None:
+    hits = SemanticIndex(corrected, embedder).search("horas con precio negativo", limit=1)
+    assert hits[0].kind == "measure" and hits[0].table == "agg.precio_zona_hora"
 
 
 # -- respondibilidad -------------------------------------------------------------
@@ -109,6 +203,7 @@ def test_cada_respuesta_declara_la_ontologia_y_su_estado(ontology) -> None:
         "certified": False,
         "terms": 7,
         "source": "auto-ontology-agno",
+        "corrections": {"applied": 0, "orphans": [], "reviewed_by": ""},
     }
 
 
@@ -136,7 +231,9 @@ def test_herramientas_mcp_en_memoria(ontology, monkeypatch) -> None:
     assert names == {"search_terms", "check_answerable", "get_term"}
     assert len(json.loads(search.content[0].text)["hits"]) == 2
     assert json.loads(answer.content[0].text)["answerable"] is True
-    assert json.loads(term.content[0].text)["term"]["name"] == "Hogar"
+    payload = json.loads(term.content[0].text)["term"]
+    assert payload["name"] == "Hogar"
+    assert {"relations", "measures"} <= payload.keys()
 
 
 def test_capa_apagada_lo_dice_en_vez_de_responder(monkeypatch) -> None:

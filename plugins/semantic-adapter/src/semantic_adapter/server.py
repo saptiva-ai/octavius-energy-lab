@@ -3,7 +3,7 @@
 Variables:
   ENERGY_SEMANTIC_LAYER       off (por omisión) | local
   SEMANTIC_ONTOLOGY_PATH      YAML nativo exportado por Auto Ontology
-  SEMANTIC_ONTOLOGY_CERTIFIED true solo cuando una persona lo revisó
+  SEMANTIC_CORRECTIONS_PATH  capa de correcciones humanas (por omisión, correcciones.yaml junto al YAML)
   SEMANTIC_BASE_URL           endpoint compatible con OpenAI (InferNode)
   SEMANTIC_API_KEY            llave del endpoint
   SEMANTIC_LLM_MODEL          extractor de entidades (nemotron-3.5-lightning)
@@ -51,9 +51,10 @@ def _service() -> SemanticService:
     base_url = os.environ["SEMANTIC_BASE_URL"]
     api_key = os.environ["SEMANTIC_API_KEY"]
     dims = os.environ.get("SEMANTIC_EMBED_DIMENSIONS", "2048").strip()
+    export = Path(os.environ.get("SEMANTIC_ONTOLOGY_PATH", str(_DEFAULT_ONTOLOGY)))
+    corrections = os.environ.get("SEMANTIC_CORRECTIONS_PATH")
     ontology = load_ontology(
-        Path(os.environ.get("SEMANTIC_ONTOLOGY_PATH", str(_DEFAULT_ONTOLOGY))),
-        certified=os.environ.get("SEMANTIC_ONTOLOGY_CERTIFIED", "false").lower() == "true",
+        export, corrections=Path(corrections) if corrections else export.with_name("correcciones.yaml")
     )
     embedder = OpenAICompatibleEmbedder(
         base_url=base_url,

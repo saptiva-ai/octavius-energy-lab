@@ -1,0 +1,96 @@
+# Correcciones humanas sobre la ontología generada (auto_ontology.yaml).
+#
+# Las llaves son nombres físicos (esquema.vista y esquema.vista.columna), no los
+# IDs del modelo: los IDs cambian en cada compilación y estos nombres no. Si una
+# vista o columna desaparece, su corrección queda huérfana, el plugin la reporta
+# y la ontología deja de estar certificada.
+#
+# Estado: propuesta inicial escrita a partir de la migración 0007. Nadie la ha
+# revisado todavía; por eso certificada es false y revisado_por está vacío.
+revisado_por: ""
+certificada: false
+
+terminos:
+  agg.zonas_carga:
+    nombre: Zona de carga
+    sinonimos: [Load Zone, zona]
+    columnas:
+      agg.zonas_carga.zona_carga:
+        nombre: Zona de carga
+        descripcion: Clave de la zona de carga del catálogo de Nodos P de CENACE.
+      agg.zonas_carga.centro_control:
+        nombre: Centro de control
+        descripcion: Centro de control regional de CENACE que opera la zona.
+      agg.zonas_carga.estados:
+        nombre: Estados
+        descripcion: Entidades federativas que cubre la zona.
+      agg.zonas_carga.nodos:
+        nombre: Nodos
+        descripcion: Número de nodos de precio (Nodos P) en la zona.
+
+  agg.tarifa_dinamica:
+    nombre: Tarifa dinámica
+    sinonimos: [ToU, tarifa por horario]
+    columnas:
+      agg.tarifa_dinamica.precio_p_kwh:
+        nombre: Precio
+        descripcion: Precio de la media hora en peniques por kWh.
+      agg.tarifa_dinamica.banda:
+        nombre: Banda de precio
+        descripcion: "Alta (67.20 p/kWh), Normal (11.76 p/kWh) o Baja (3.99 p/kWh)."
+      agg.tarifa_dinamica.momento:
+        nombre: Momento
+        descripcion: Inicio de la media hora en UTC.
+
+  agg.consumo_hogar_diario:
+    columnas:
+      agg.consumo_hogar_diario.lecturas:
+        nombre: Lecturas
+        descripcion: Medias horas con dato en el día. 48 es un día completo; menos indica huecos del medidor.
+
+  agg.precio_zona_hora:
+    columnas:
+      agg.precio_zona_hora.precio_total_mxn_mwh:
+        nombre: Precio total
+        descripcion: Precio marginal local de la zona en pesos por MWh. Puede ser negativo.
+      agg.precio_zona_hora.proceso:
+        nombre: Proceso
+        descripcion: "MDA: mercado del día en adelanto. MTR: mercado de tiempo real."
+
+relaciones:
+  - desde: agg.consumo_hogar_diario.hogar
+    hacia: agg.hogares.hogar
+    tipo: muchos_a_uno
+  - desde: agg.consumo_hogar_media_hora.hogar
+    hacia: agg.hogares.hogar
+    tipo: muchos_a_uno
+  - desde: agg.precio_zona_hora.zona_carga
+    hacia: agg.zonas_carga.zona_carga
+    tipo: muchos_a_uno
+
+medidas:
+  - nombre: Consumo total
+    vista: agg.consumo_hogar_diario
+    sql: sum(consumo_kwh)
+    unidad: kWh
+    descripcion: Energía consumida por los hogares en el periodo.
+  - nombre: Consumo diario promedio por hogar
+    vista: agg.consumo_hogar_diario
+    sql: avg(consumo_kwh) FILTER (WHERE lecturas = 48)
+    unidad: kWh/día
+    descripcion: Solo días completos, para que los huecos del medidor no bajen el promedio.
+  - nombre: Energía de clientes de Portugal
+    vista: agg.consumo_cliente_cuarto_hora
+    sql: sum(potencia_kw) / 4
+    unidad: kWh
+    descripcion: La potencia promedio de cada cuarto de hora entre 4 da la energía del intervalo.
+  - nombre: Precio promedio
+    vista: agg.precio_zona_hora
+    sql: avg(precio_total_mxn_mwh)
+    unidad: MXN/MWh
+    descripcion: Filtrar por proceso (MDA o MTR); mezclar ambos no tiene sentido económico.
+  - nombre: Horas con precio negativo
+    vista: agg.precio_zona_hora
+    sql: count(*) FILTER (WHERE precio_total_mxn_mwh < 0)
+    unidad: horas
+    descripcion: Horas en que la zona pagó por consumir energía.

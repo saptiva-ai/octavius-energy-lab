@@ -34,7 +34,7 @@ class SemanticService:
         term = self.ontology.term(name)
         return {
             "found": term is not None,
-            "term": term.as_dict() if term else None,
+            "term": {**term.as_dict(), **self.ontology.related(term)} if term else None,
             "ontology": self.ontology.summary(),
         }
 

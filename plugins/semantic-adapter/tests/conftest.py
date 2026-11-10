@@ -69,9 +69,18 @@ class FixedExtractor:
         return list(self.entities)
 
 
+CORRECTIONS = ONTOLOGY.with_name("correcciones.yaml")
+
+
 @pytest.fixture(scope="session")
 def ontology():
+    """La exportación del modelo tal cual, sin correcciones."""
     return load_ontology(ONTOLOGY)
+
+
+@pytest.fixture(scope="session")
+def corrected():
+    return load_ontology(ONTOLOGY, corrections=CORRECTIONS)
 
 
 @pytest.fixture()

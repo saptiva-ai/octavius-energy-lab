@@ -21,7 +21,7 @@ class Hit:
     term: str
     table: str | None
     column: str | None
-    kind: str  # "term" o "column"
+    kind: str  # "term", "column" o "measure"
     text: str
     score: float  # coseno en [0, 1]
 
@@ -46,7 +46,16 @@ def _documents(ontology: Ontology) -> list[dict]:
                 "table": table,
                 "column": None,
                 "kind": "term",
-                "text": f"{term.name}. {term.description} Vista {table or ''}.".strip(),
+                "text": " ".join(
+                    part
+                    for part in (
+                        f"{term.name}.",
+                        f"También: {', '.join(term.synonyms)}." if term.synonyms else "",
+                        term.description,
+                        f"Vista {table}." if table else "",
+                    )
+                    if part
+                ),
             }
         )
         for column in term.columns:
@@ -62,6 +71,17 @@ def _documents(ontology: Ontology) -> list[dict]:
                     ),
                 }
             )
+    for measure in ontology.measures:
+        owner = next((t.name for t in ontology.terms if measure.table in t.tables), measure.name)
+        docs.append(
+            {
+                "term": owner,
+                "table": measure.table,
+                "column": None,
+                "kind": "measure",
+                "text": f"Medida {measure.name} ({measure.unit}): {measure.description} = {measure.sql}",
+            }
+        )
     return docs
 
 
