@@ -9,6 +9,10 @@ Pipeline reproducible para cargar series eléctricas a `core.observation` (ver `
 
 Las selecciones distintas (otros clientes u otras fechas) generan lotes distintos: un demo de 20 clientes no hace que una carga posterior salte meses.
 
+Las series que la fuente no declara de antemano (por ejemplo, los hogares de LCL) se crean al aparecer. Los duplicados (serie, hora) dentro de una unidad se eliminan en la base y se cuentan, distinguiendo los que traen valores distintos.
+
+**Español:** cada serie guarda `attrs.etiqueta` y `attrs.unidad` en español. La CLI imprime el resumen y el reporte de calidad en español (glosario en `energy_lab_ingest/etiquetas.py`). Los identificadores internos (`consumption`, `price`, llaves de calidad) se mantienen como contratos estables.
+
 ## Perfiles
 
 | Perfil | Datos | Red | Uso |
@@ -118,3 +122,42 @@ Demo con 1 zona por CCR (7 zonas), septiembre-octubre de 2025, MDA:
 ### Pendiente
 
 La **demanda** (estimación de demanda real por balance o por retiros) no tiene servicio web. Solo existe un formulario ASP.NET con postbacks (`EstimacionDemandaReal.aspx`), así que queda para un PR aparte.
+
+## Low Carbon London
+
+- **Fuente:** https://data.london.gov.uk/dataset/smartmeter-energy-consumption-data-in-london-households-vqm0d (CC BY 4.0, UK Power Networks).
+- **Archivos:** se usa `Partitioned LCL Data.zip` (168 CSV de un millón de filas), con sha256 fijado. Se lee **sin extraer** y cada archivo es una unidad de carga. La tarifa dinámica 2013 se carga desde `Tariffs.xlsx` como la serie `tariff_price` (p/kWh).
+- **Fixture:** `fixtures/lcl_smoke.csv` es un recorte real: dos hogares Std y uno ToU alrededor del cambio de horario de marzo de 2013, más un día con duplicados.
+
+### Formato y tratamiento
+
+Verificado sobre el archivo real:
+
+| Hecho | Tratamiento | Calidad |
+|---|---|---|
+| Los días de cambio de horario de Londres traen 48 lecturas, no 46 ni 50 | `DateTime` se toma como UTC | |
+| Duplicados exactos (hogar, hora): 688 en el primer archivo, todos con el mismo valor | El loader los elimina | `duplicates_dropped`, `duplicates_conflicting` |
+| Una fila final por hogar fuera de la malla (p. ej. `12:37:27`, con `Null`) | Se descarta | `off_grid_timestamps` |
+| `Null` | NULL en la base | `null_values` |
+| Archivos ordenados por tarifa: Std al inicio, ToU al final | El demo estratifica por tarifa leyendo la primera fila de cada archivo | |
+
+**Sesgo de selección encontrado:** la primera versión del demo repartía archivos por índice. Eligió los archivos 0, 42, 84 y 126, todos Std, y dejó **cero hogares ToU** con el mismo número de archivos. Ahora cada tarifa recibe archivos en proporción a su tamaño y al menos uno. La prueba `test_pick_files_estratifica_por_tarifa` cubre el caso.
+
+**No verificado:** si `DateTime` marca el inicio o el fin de la media hora. La serie lo declara como `ts_label = as_published`.
+
+```bash
+make lcl-smoke
+make lcl-demo LCL_FILES=4
+make lcl-full          # estimación: 168 millones de filas, ~15 GB
+```
+
+### Resultados medidos (demo de 4 archivos, antes de estratificar)
+
+| Medida | Valor |
+|---|---|
+| Filas leídas / cargadas | 4,000,000 / 3,997,103 |
+| Tiempo | 70 s (unas 57 mil filas/s) |
+| Duplicados eliminados / marcas fuera de malla | 2,764 / 133 |
+| Segunda corrida | 4 archivos saltados |
+
+Con el loader actual (series descubiertas y deduplicación en la base), el demo de UCI bajó de unas 59 mil a unas 34 mil filas/s. Ese es el costo de la deduplicación y de resolver series con JOIN.

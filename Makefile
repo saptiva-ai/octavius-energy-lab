@@ -13,7 +13,7 @@ COMPOSE = docker compose -f $(COMPOSE_BASE) -f $(COMPOSE_DEV) --env-file $(ENV_F
 BACKEND_DIR := apps/backend
 T ?= api
 
-.PHONY: help env dev up down logs ps test test-api test-web test-db test-ingest lint lint-api lint-web lint-db lint-ingest db-up db-migrate db-status ingest-smoke ingest-demo ingest-full cenace-smoke cenace-demo cenace-full
+.PHONY: help env dev up down logs ps test test-api test-web test-db test-ingest lint lint-api lint-web lint-db lint-ingest db-up db-migrate db-status ingest-smoke ingest-demo ingest-full cenace-smoke cenace-demo cenace-full lcl-smoke lcl-demo lcl-full bench-e1 test-bench lint-bench
 
 help: ## Lista los comandos disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -36,7 +36,7 @@ logs: ## Sigue los logs (S=servicio opcional)
 ps: ## Estado de los servicios
 	$(COMPOSE) ps
 
-test: ## Corre pruebas: T=api|web|db|ingest
+test: ## Corre pruebas: T=api|web|db|ingest|bench
 	@$(MAKE) --no-print-directory test-$(T)
 
 test-api: ## Pruebas unitarias del backend en el host (uv)
@@ -49,7 +49,7 @@ test-web: ## Pruebas, tipos y lint de la web (bun)
 	bun run bun:lint:web
 	bun run bun:test:web
 
-lint: lint-api lint-web lint-db lint-ingest ## Lint de backend, web, db e ingesta
+lint: lint-api lint-web lint-db lint-ingest lint-bench ## Lint de backend, web, db, ingesta y bench
 
 lint-api: ## Ruff sobre el backend
 	cd $(BACKEND_DIR) && uvx ruff==0.16.5 check src/ && uvx ruff==0.16.5 format --check src/
@@ -114,3 +114,30 @@ cenace-demo: ## Precios por zona: CENACE_PER_CCR zonas por centro de control ent
 
 cenace-full: ## Estimación de todas las zonas del SIN desde 2016; YES=1 para cargar
 	$(INGEST_RUN) python -m energy_lab_ingest cenace --profile full $(if $(filter 1,$(YES)),--yes,)
+
+LCL_FILES ?= 4
+
+lcl-smoke: ## Carga el fixture de Low Carbon London (sin red)
+	$(INGEST_RUN) python -m energy_lab_ingest lcl --profile smoke
+
+lcl-demo: ## Descarga LCL y carga LCL_FILES archivos estratificados por tarifa, más la tarifa dinámica
+	$(INGEST_RUN) python -m energy_lab_ingest lcl --profile demo --files $(LCL_FILES)
+
+lcl-full: ## Estimación de LCL completo (168 archivos); YES=1 para cargar
+	$(INGEST_RUN) python -m energy_lab_ingest lcl --profile full $(if $(filter 1,$(YES)),--yes,)
+
+# ---------------------------------------------------------------------------
+# Benchmarks (bench/)
+# ---------------------------------------------------------------------------
+BENCH_DIR := bench
+E1_FECHA ?= $(shell date +%Y-%m-%d)
+
+bench-e1: ## E1: volumen, ingesta, latencia y poda; JSON y resumen en español en results/e1/
+	cd $(BENCH_DIR) && set -a && . ../$(ENV_FILE) && set +a && uv run --python 3.11 --with-editable . \
+		python -m energy_lab_bench e1 --source lcl --out ../results/e1/$(E1_FECHA).json --resumen ../results/e1/$(E1_FECHA).md
+
+test-bench: ## Pruebas de bench/ (requiere ENERGY_LAB_TEST_ADMIN_DSN)
+	cd $(BENCH_DIR) && uv run --python 3.11 --with-editable . --with-editable ../ingest --with-editable ../db --with pytest pytest -q
+
+lint-bench: ## Ruff sobre bench/
+	cd $(BENCH_DIR) && uvx ruff==0.16.5 check . && uvx ruff==0.16.5 format --check .

@@ -4,6 +4,9 @@
   energy-lab-ingest uci --profile demo --clients 20 --start 2013-01-01 --end 2015-01-01
   energy-lab-ingest uci --profile full            # muestra la estimación y se detiene
   energy-lab-ingest uci --profile full --yes      # carga completa
+  energy-lab-ingest lcl --profile smoke
+  energy-lab-ingest lcl --profile demo --files 4
+  energy-lab-ingest lcl --profile full                       # estimación; --yes para cargar
   energy-lab-ingest cenace --profile smoke
   energy-lab-ingest cenace --profile demo --per-ccr 2 --start 2025-01-01 --end 2025-12-31
   energy-lab-ingest cenace --profile full --service pend   # estimación; --yes para cargar
@@ -17,15 +20,17 @@ import argparse
 import json
 import os
 import sys
+from collections import Counter
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
 
 import psycopg
 
 from .download import data_dir, extract_member, fetch
+from .etiquetas import describir_calidad
 from .loader import Loader
 from .profiles import FIXTURES, estimate, spread
-from .sources import cenace, cenace_catalog, uci
+from .sources import cenace, cenace_catalog, lcl, uci
 
 EXIT_NEEDS_APPROVAL = 2
 
@@ -40,6 +45,34 @@ def _uci_file(profile: str) -> tuple[object, str]:
     cache = data_dir() / "uci"
     archive = fetch(uci.URL, cache / "eld.zip", expected_sha256=uci.ZIP_SHA256)
     return extract_member(archive, uci.FILENAME, cache / "extracted"), f"zip-{uci.ZIP_SHA256[:12]}"
+
+
+def resumen(fuente: str, perfil: str, report, **extra) -> dict:
+    """Resumen de una carga con llaves en español."""
+    return {
+        "fuente": fuente,
+        "perfil": perfil,
+        **extra,
+        "unidades_cargadas": report.units_loaded,
+        "unidades_saltadas": report.units_skipped,
+        "filas_leidas": report.rows_read,
+        "filas_cargadas": report.rows_loaded,
+        "segundos": round(report.seconds, 2),
+        "filas_por_segundo": round(report.rows_per_second),
+    }
+
+
+def imprimir(datos: dict, report=None) -> None:
+    print(json.dumps(datos, ensure_ascii=False))
+    if report is not None and report.units:
+        total: Counter = Counter()
+        for unidad in report.units:
+            total.update({k: v for k, v in unidad.items() if isinstance(v, int) and k != "rows_loaded"})
+        lineas = describir_calidad(dict(total))
+        if lineas:
+            print("Calidad de los datos:")
+            for linea in lineas:
+                print(f"  - {linea}")
 
 
 def run_uci(args: argparse.Namespace) -> int:
@@ -71,18 +104,7 @@ def run_uci(args: argparse.Namespace) -> int:
     with psycopg.connect(dsn) as conn:
         report = Loader(conn, source.dataset_info(version=version), profile=args.profile).load(source)
 
-    summary = {
-        "source": "uci_eld",
-        "profile": args.profile,
-        "clients": len(source.clients),
-        "units_loaded": report.units_loaded,
-        "units_skipped": report.units_skipped,
-        "rows_read": report.rows_read,
-        "rows_loaded": report.rows_loaded,
-        "seconds": round(report.seconds, 2),
-        "rows_per_second": round(report.rows_per_second),
-    }
-    print(json.dumps(summary, ensure_ascii=False))
+    imprimir(resumen("uci_eld", args.profile, report, clientes=len(source.clients)), report)
     return 0
 
 
@@ -168,23 +190,65 @@ def run_cenace(args: argparse.Namespace) -> int:
             cenace_catalog.load_catalog(conn, catalog)
         report = Loader(conn, source.dataset_info(version=version), profile=args.profile).load(source)
 
-    print(
-        json.dumps(
-            {
-                "source": source.name,
-                "profile": args.profile,
-                "system": source.system,
-                "process": source.process,
-                "keys": len(source.keys),
-                "units_loaded": report.units_loaded,
-                "units_skipped": report.units_skipped,
-                "rows_loaded": report.rows_loaded,
-                "api_calls": source.client.calls,
-                "seconds": round(report.seconds, 2),
-            },
-            ensure_ascii=False,
-        )
+    imprimir(
+        resumen(
+            source.name,
+            args.profile,
+            report,
+            sistema=source.system,
+            proceso=source.process,
+            claves=len(source.keys),
+            llamadas=source.client.calls,
+        ),
+        report,
     )
+    return 0
+
+
+def run_lcl(args: argparse.Namespace) -> int:
+    tariff_file = None
+    if args.profile == "smoke":
+        source = lcl.LclSource([FIXTURES / "lcl_smoke.csv"])
+        version = "smoke-fixture"
+    else:
+        if args.profile == "full" and not args.yes:
+            rows = lcl.FILES_IN_FULL * lcl.ROWS_PER_FILE
+            print("Perfil full: Low Carbon London completo (168 archivos, 5,567 hogares, 2011-2014).")
+            print(estimate(rows, lcl.FILES_IN_FULL).describe().replace("meses", "archivos"))
+            print("Descarga: ~759 MB (zip); se lee sin extraer (8.5 GB descomprimido).")
+            print("Vuelve a correr con --yes para cargar.")
+            return EXIT_NEEDS_APPROVAL
+        cache = data_dir() / "lcl"
+        archive = fetch(
+            lcl.PARTITIONED_URL, cache / "lcl-partitioned.zip", expected_sha256=lcl.PARTITIONED_SHA256
+        )
+        tariff_file = fetch(lcl.TARIFFS_URL, cache / "Tariffs.xlsx", expected_sha256=lcl.TARIFFS_SHA256)
+        import zipfile
+
+        zf = zipfile.ZipFile(archive)
+        members = [n for n in zf.namelist() if n.endswith(".csv")]
+        if args.profile == "full":
+            chosen = members
+        else:
+            tariffs = {m: lcl.first_tariff(zf, m) for m in members}
+            chosen = lcl.pick_files(members, args.files, tariff_of=tariffs.get)
+            mix = {t: sum(tariffs[m] == t for m in chosen) for t in sorted(set(tariffs.values()))}
+            print(json.dumps({"archivos_lcl": len(chosen), "por_tarifa": mix}, ensure_ascii=False))
+        source = lcl.LclSource.from_zip(archive, chosen)
+        version = f"zip-{lcl.PARTITIONED_SHA256[:12]}"
+
+    summaries = []
+    with _connect() as conn:
+        if tariff_file is not None:
+            tariff = lcl.TariffSource(tariff_file)
+            rep = Loader(
+                conn, tariff.dataset_info(version=f"xlsx-{lcl.TARIFFS_SHA256[:12]}"), args.profile
+            ).load(tariff)
+            summaries.append((resumen(tariff.name, args.profile, rep), None))
+        report = Loader(conn, source.dataset_info(version=version), profile=args.profile).load(source)
+    summaries.append((resumen(source.name, args.profile, report), report))
+    for datos, rep in summaries:
+        imprimir(datos, rep)
     return 0
 
 
@@ -199,6 +263,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--end", help="YYYY-MM-DD, exclusivo (UTC)")
     p.add_argument("--yes", action="store_true", help="aprueba el perfil full")
     p.set_defaults(func=run_uci)
+
+    lp = sub.add_parser("lcl", help="Low Carbon London: hogares de Londres (CC BY 4.0)")
+    lp.add_argument("--profile", choices=["smoke", "demo", "full"], required=True)
+    lp.add_argument(
+        "--files", type=int, default=4, help="demo: archivos repartidos (de 168, ~30 hogares c/u)"
+    )
+    lp.add_argument("--yes", action="store_true", help="aprueba el perfil full")
+    lp.set_defaults(func=run_lcl)
 
     c = sub.add_parser("cenace", help="CENACE: precios por zona de carga (pend) o por nodo (pml)")
     c.add_argument("--profile", choices=["smoke", "demo", "full"], required=True)

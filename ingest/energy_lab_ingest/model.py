@@ -33,6 +33,7 @@ class SeriesSpec:
     tz: str = "UTC"
     name: str | None = None
     attrs: dict = field(default_factory=dict)
+    cohorts: tuple[tuple[str, str], ...] = ()  # p. ej. (("tariff", "ToU"),)
 
 
 @dataclass
@@ -56,3 +57,6 @@ class Source(Protocol):
         ...
 
     def iter_units(self) -> Iterator[Unit]: ...
+
+    # Opcional: fuentes que descubren series al leer (p. ej. hogares de LCL)
+    # implementan spec_for(source_key) -> SeriesSpec.
