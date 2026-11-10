@@ -1,0 +1,73 @@
+# Copiloto completo en la EC2 del laboratorio (se aplica encima de docker-compose.yml).
+#
+#   docker compose --env-file ../envs/.env -f docker-compose.yml -f docker-compose.ec2.yml up -d --build
+#
+# - El LLM es InferNode dev: SAPTIVA_BASE_URL sin /v1 (el cliente lo agrega),
+#   SAPTIVA_EXTRA_HEADERS con el service token de Cloudflare Access y nombres de
+#   modelo de InferNode en CHAT_DEFAULT_MODEL / CHAT_ALLOWED_MODELS.
+# - El plugin de dominio es semantic-adapter: el backend descubre sus herramientas
+#   por MCP en RETAIL_ADVISOR_URL, sin cambios de código.
+# - Nada escucha fuera de la instancia: web y backend solo en 127.0.0.1 (túnel
+#   SSH), el resto sin puertos publicados. Se publica con el perfil "publicar"
+#   (cloudflared con TUNNEL_TOKEN), que sale hacia Cloudflare sin abrir puertos.
+# - Fuera: embedding-service, weaviate y nginx (no los necesita el copiloto).
+
+services:
+  mongodb:
+    ports: !reset []
+  redis:
+    ports: !reset []
+  minio:
+    ports: !reset []
+  file-manager:
+    ports: !reset []
+  embedding-service:
+    profiles: ["rag"]  # el copiloto no lo usa; torch ocupa ~1 GB de RAM
+    ports: !reset []
+
+  backend:
+    ports: !override ["127.0.0.1:8000:8000"]
+    environment:
+      - RETAIL_ADVISOR_URL=http://semantic-adapter:8004/mcp/mcp
+    depends_on:
+      semantic-adapter:
+        condition: service_healthy
+
+  web:
+    ports: !override ["127.0.0.1:3000:3000"]
+
+  semantic-adapter:
+    build:
+      context: ..
+      dockerfile: plugins/semantic-adapter/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-semantic-adapter
+    restart: unless-stopped
+    environment:
+      - ENERGY_SEMANTIC_LAYER=${ENERGY_SEMANTIC_LAYER:-local}
+      - SEMANTIC_BASE_URL=${SAPTIVA_BASE_URL}/v1
+      - SEMANTIC_API_KEY=${SAPTIVA_API_KEY}
+      - LLM_EXTRA_HEADERS_JSON=${SAPTIVA_EXTRA_HEADERS}
+      - SEMANTIC_LLM_MODEL=${SEMANTIC_LLM_MODEL:-nemotron-3.5-lightning}
+      - SEMANTIC_EMBED_MODEL=${SEMANTIC_EMBED_MODEL:-qwen3-embedding-8b}
+      - SEMANTIC_EMBED_DIMENSIONS=${SEMANTIC_EMBED_DIMENSIONS:-2048}
+    volumes:
+      - semantic_cache:/app/cache
+    networks:
+      - octavios-network
+
+  cloudflared:
+    profiles: ["publicar"]
+    image: cloudflare/cloudflared:2025.8.0
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN:-}
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - octavios-network
+
+volumes:
+  semantic_cache:
