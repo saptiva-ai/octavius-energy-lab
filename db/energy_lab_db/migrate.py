@@ -22,7 +22,7 @@ from psycopg import sql
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 FILENAME_RE = re.compile(r"^(?P<version>\d{4})_(?P<name>[a-z0-9_]+)\.sql$")
-LOGIN_ROLES = ("lab_ingest", "lab_agent", "lab_forecast", "lab_eval")
+LOGIN_ROLES = ("lab_ingest", "lab_agent", "lab_forecast", "lab_eval", "lab_ontology")
 # Clave fija para pg_advisory_xact_lock: evita dos runners a la vez.
 ADVISORY_LOCK_KEY = 7_202_611
 

@@ -26,7 +26,8 @@ MIGRATIONS_DIR = Path(__file__).resolve().parents[1] / "migrations"
 
 # Contraseñas solo de prueba: se generan por sesión y nunca salen del proceso.
 ROLE_PASSWORDS = {
-    role: secrets.token_urlsafe(16) for role in ("lab_ingest", "lab_agent", "lab_forecast", "lab_eval")
+    role: secrets.token_urlsafe(16)
+    for role in ("lab_ingest", "lab_agent", "lab_forecast", "lab_eval", "lab_ontology")
 }
 
 
