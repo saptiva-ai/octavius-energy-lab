@@ -17,6 +17,26 @@ ONTOLOGY = (
 )
 
 _DIM = 256
+# Sin palabras vacías: con descripciones largas en español, "de" y "la" acercaban cualquier par de textos.
+_STOPWORDS = {
+    "de",
+    "la",
+    "el",
+    "los",
+    "las",
+    "del",
+    "y",
+    "en",
+    "por",
+    "con",
+    "a",
+    "un",
+    "una",
+    "que",
+    "se",
+    "su",
+    "o",
+}
 
 
 class HashEmbedder:
@@ -33,6 +53,8 @@ class HashEmbedder:
         for text in texts:
             vec = [0.0] * _DIM
             for token in re.findall(r"[a-záéíóúñ0-9]+", text.lower()):
+                if token in _STOPWORDS:
+                    continue
                 vec[int(hashlib.sha1(token.encode()).hexdigest(), 16) % _DIM] += 1.0
             norm = math.sqrt(sum(v * v for v in vec)) or 1.0
             vectors.append([v / norm for v in vec])
