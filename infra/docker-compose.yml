@@ -1,0 +1,577 @@
+# ========================================
+# COPILOT OS - BASE DOCKER COMPOSE
+# ========================================
+# Archivo canónico para levantar la plataforma completa (dev, testing, prod).
+# Usa perfiles de Docker Compose para habilitar servicios adicionales cuando se necesitan.
+#   Desarrollo: make dev / docker compose -f infra/docker-compose.yml up -d
+#   Testing:    docker compose -f infra/docker-compose.yml --profile testing up --build
+#   Producción: docker compose -f infra/docker-compose.yml --profile production up -d
+
+# CRITICAL: Name must match existing production deployment to reuse volumes
+name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}
+
+services:
+  # ========================================
+  # MONGODB DATABASE
+  # ========================================
+  mongodb:
+    image: mongo:7.0
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-mongodb
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGODB_USER:-octavios_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGODB_PASSWORD:-secure_password_change_me}
+      MONGO_INITDB_DATABASE: ${MONGODB_DATABASE:-octavios}
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    ports:
+      - "${MONGODB_PORT:-27018}:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - octavios-network
+
+  # ========================================
+  # REDIS CACHE
+  # ========================================
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-redis
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_password_change_me}
+      --maxmemory ${REDIS_MAX_MEMORY:-256mb}
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    ports:
+      - "${REDIS_PORT:-6380}:6379"
+    networks:
+      - octavios-network
+
+  # ========================================
+  # MINIO - S3-Compatible Object Storage
+  # ========================================
+  minio:
+    image: minio/minio:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    env_file:
+      - ../envs/.env
+    environment:
+      # Credentials (from .env)
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin123}
+
+      # Browser configuration
+      - MINIO_BROWSER=on
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+
+      # Storage configuration
+      - MINIO_STORAGE_CLASS_STANDARD=EC:0
+      - MINIO_API_REQUESTS_MAX=10000
+      - MINIO_API_REQUESTS_DEADLINE=10s
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - octavios-network
+
+  # ========================================
+  # WEAVIATE - Vector Database (Primary)
+  # ========================================
+  # Strategic choice for Multimodal RAG & Context Engineering
+  # Replaces Qdrant (v4)
+  weaviate:
+    profiles: ["local-rag"]
+    image: cr.weaviate.io/semitechnologies/weaviate:1.32.2
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-weaviate
+    restart: unless-stopped
+    command:
+      - --host
+      - 0.0.0.0
+      - --port
+      - '8080'
+      - --scheme
+      - http
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      QUERY_DEFAULTS_LIMIT: 25
+      AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED: 'true'
+      PERSISTENCE_DATA_PATH: '/var/lib/weaviate'
+      DEFAULT_VECTORIZER_MODULE: 'none'
+      ENABLE_MODULES: ''  # Client-side embeddings (sentence-transformers)
+      CLUSTER_HOSTNAME: 'node1'
+      GRPC_PORT: 50051
+    volumes:
+      - weaviate_data:/var/lib/weaviate
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - octavios-network
+
+  # ========================================
+  # FASTAPI BACKEND (CORE)
+  # ========================================
+  # Service name: 'backend' - Core/Kernel in Plugin-First Architecture
+  # Port 8000 - Main orchestration layer for chat, auth, sessions
+  backend:
+    build:
+      context: ../apps/backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-backend
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    command: python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --workers 1
+    environment:
+      - PORT=8000
+      - MONGODB_URL=mongodb://$MONGODB_USER:$MONGODB_PASSWORD@mongodb:27017/$MONGODB_DATABASE?authSource=admin
+      - REDIS_URL=redis://:$REDIS_PASSWORD@redis:6379/0
+      # Autenticación
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-jwt-secret-change-in-production}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-in-production}
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+
+      # CORS y Hosts permitidos
+      - CORS_ORIGINS=${CORS_ORIGINS:-["http://localhost:3000"]}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-["localhost","127.0.0.1","web","api","backend"]}
+
+      # Logging y debug
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DEBUG=${DEBUG:-false}
+
+      # Function-calling retail: modelo dedicado al paso decide (la narración
+      # usa el modelo de la sesión). Turbo emite argumentos vacíos/truncados
+      # según el fraseo (card decide-robusto 2026-07-13); Ops los resolvió.
+      # Vacío = usar el modelo de la sesión también para decide.
+      - RETAIL_ADVISOR_DECIDE_MODEL=${RETAIL_ADVISOR_DECIDE_MODEL:-Saptiva Ops}
+
+      # Integraciones externas
+      - ALETHEIA_BASE_URL=${ALETHEIA_BASE_URL:-http://localhost:8000}
+      - ALETHEIA_API_KEY=${ALETHEIA_API_KEY:-}
+      - ALETHEIA_TIMEOUT=${ALETHEIA_TIMEOUT:-120}
+      - ALETHEIA_MAX_RETRIES=${ALETHEIA_MAX_RETRIES:-3}
+
+      # Object Storage (MinIO)
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_SECURE=false
+
+      # RAG - Weaviate Vector Database
+      - WEAVIATE_URL=${WEAVIATE_URL:-http://weaviate:8080}
+      - WEAVIATE_API_KEY=${WEAVIATE_API_KEY:-}
+      - WEAVIATE_GRPC_PORT=${WEAVIATE_GRPC_PORT:-50051}
+      - RAG_COLLECTION_NAME=rag_documents
+
+      # RAG - Session TTL and cleanup
+      - RAG_SESSION_TTL_HOURS=${RAG_SESSION_TTL_HOURS:-24}
+      - RAG_CLEANUP_INTERVAL_HOURS=${RAG_CLEANUP_INTERVAL_HOURS:-1}
+
+      # Deep Research Feature Flags (P0-DR-KILL-001)
+      # GLOBAL KILL SWITCH - dominates all other flags
+      - DEEP_RESEARCH_KILL_SWITCH=${DEEP_RESEARCH_KILL_SWITCH:-false}
+      # Legacy flags (only active when kill switch is false)
+      - DEEP_RESEARCH_ENABLED=${DEEP_RESEARCH_ENABLED:-false}
+      - DEEP_RESEARCH_AUTO=${DEEP_RESEARCH_AUTO:-false}
+      - DEEP_RESEARCH_COMPLEXITY_THRESHOLD=${DEEP_RESEARCH_COMPLEXITY_THRESHOLD:-0.7}
+
+      # Chat Configuration (P0-CHAT-BASE-004)
+      - CHAT_DEFAULT_MODEL=${CHAT_DEFAULT_MODEL:-Saptiva Turbo}
+      - CHAT_ALLOWED_MODELS=${CHAT_ALLOWED_MODELS:-Saptiva Turbo,Saptiva Cortex,Saptiva Ops,Saptiva Coder,Saptiva Legacy}
+
+      - SAPTIVA_BASE_URL=${SAPTIVA_BASE_URL:-https://api.saptiva.com}
+      - SAPTIVA_TIMEOUT=${SAPTIVA_TIMEOUT:-30}
+
+      # Cache versioning (bump to invalidate all versioned caches on deploy)
+      - CACHE_VERSION=${CACHE_VERSION:-v1}
+
+      # Rate limiting (disabled in development for better DX)
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-false}
+      - RATE_LIMIT_CALLS=${RATE_LIMIT_CALLS:-1000}
+      - RATE_LIMIT_PERIOD=${RATE_LIMIT_PERIOD:-60}
+
+      # Observabilidad
+      - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-octavios-backend}
+      - JAEGER_ENDPOINT=${JAEGER_ENDPOINT:-http://localhost:14268/api/traces}
+
+      # Plugin URLs (Plugin-First Architecture)
+      - FILE_MANAGER_URL=${FILE_MANAGER_URL:-http://file-manager:8001}
+      # gRPC client for file-manager (high-performance operations)
+      - FILE_MANAGER_GRPC_HOST=${FILE_MANAGER_GRPC_HOST:-file-manager}
+      - FILE_MANAGER_GRPC_PORT=${FILE_MANAGER_GRPC_PORT:-50052}
+      - USE_GRPC_FILE_MANAGER=${USE_GRPC_FILE_MANAGER:-true}
+
+      # Embedding Service Plugin (sentence-transformers)
+      - EMBEDDING_SERVICE_URL=${EMBEDDING_SERVICE_URL:-http://embedding-service:8003}
+      # gRPC client for embedding-service (high-performance operations)
+      - EMBEDDING_SERVICE_GRPC_HOST=${EMBEDDING_SERVICE_GRPC_HOST:-embedding-service}
+      - EMBEDDING_SERVICE_GRPC_PORT=${EMBEDDING_SERVICE_GRPC_PORT:-50053}
+      - USE_GRPC_EMBEDDING_SERVICE=${USE_GRPC_EMBEDDING_SERVICE:-true}
+
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      file-manager:
+        condition: service_healthy
+
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+    # NOTE: backend_shared volume removed - caused Docker Desktop/WSL mount issues
+    # No volumes in base - added in docker-compose.dev.yml for development hot reload
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - octavios-network
+
+  # ========================================
+  # NEXT.JS FRONTEND
+  # ========================================
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      target: runner
+      args:
+        # API_BASE_URL for server-side proxy (internal Docker network)
+        API_BASE_URL: ${API_BASE_URL:-http://backend:8000}
+        # NEXT_PUBLIC_API_URL: Empty by default to use Next.js proxy
+        # Override with public domain for production deployments without proxy
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_MAX_FILE_SIZE_MB: ${NEXT_PUBLIC_MAX_FILE_SIZE_MB:-50}
+        NEXT_PUBLIC_ENABLE_STREAMING: ${NEXT_PUBLIC_ENABLE_STREAMING:-true}
+        NODE_ENV: production
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-web
+    restart: unless-stopped
+    user: "${UID:-1000}:${GID:-1000}"
+    env_file:
+      - ../envs/.env
+    environment:
+      - PORT=3000
+      - NODE_ENV=${NODE_ENV:-development}
+      - API_BASE_URL=http://backend:8000
+      # NEXT_PUBLIC_API_URL not set to enable Next.js proxy (/api/* -> http://backend:8000/api/*)
+      - NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME:-Saptiva Copilot OS}
+      - NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION:-1.0.0}
+      - NEXT_PUBLIC_ENABLE_STREAMING=${NEXT_PUBLIC_ENABLE_STREAMING:-true}
+      - NEXT_PUBLIC_ENABLE_DEEP_RESEARCH=${NEXT_PUBLIC_ENABLE_DEEP_RESEARCH:-true}
+      - NEXT_PUBLIC_DEFAULT_MODEL=${NEXT_PUBLIC_DEFAULT_MODEL:-SAPTIVA_CORTEX}
+      - UID=${UID:-1000}
+      - GID=${GID:-1000}
+
+      # Deep Research Kill Switch (client-side awareness only)
+      - DEEP_RESEARCH_ENABLED=${DEEP_RESEARCH_ENABLED:-false}
+
+      # SAPTIVA Configuration (ENV-only per security requirements)
+      - SAPTIVA_API_KEY=${SAPTIVA_API_KEY:-}
+      - NEXT_PUBLIC_SAPTIVA_API_KEY=${NEXT_PUBLIC_SAPTIVA_API_KEY:-}
+      - NEXT_PUBLIC_SAPTIVA_BASE_URL=${NEXT_PUBLIC_SAPTIVA_BASE_URL:-https://api.saptiva.com}
+
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+    # Volume mounts for hot reload in development
+    # Source code is mounted to enable immediate reflection of changes
+    # node_modules is persisted in a named volume to survive container recreation
+    # PRODUCTION: Disabled hot-reload volumes
+    #     volumes:
+    # PRODUCTION: Disabled hot-reload volumes
+    #       - ../apps/web:/app/apps/web
+    # PRODUCTION: Disabled hot-reload volumes
+    #       - web_node_modules:/app/apps/web/node_modules
+    # PRODUCTION: Disabled hot-reload volumes
+    #       - /app/apps/web/.next
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    networks:
+      - octavios-network
+
+  # ========================================
+  # PRODUCTION EDGE (NGINX)
+  # ========================================
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - web
+      - backend
+    profiles:
+      - production
+    networks:
+      - octavios-network
+
+  # ========================================
+  # TESTING UTILITIES
+  # ========================================
+  playwright:
+    build:
+      context: ..
+      dockerfile: tests/Dockerfile.playwright
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-playwright
+    environment:
+      - PLAYWRIGHT_BASE_URL=http://web:3000
+      - API_BASE_URL=http://backend:8000
+    volumes:
+      - ../tests:/app/tests
+      - ../playwright-report:/app/playwright-report
+    depends_on:
+      web:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    profiles:
+      - testing
+    networks:
+      - octavios-network
+
+  # ========================================
+  # POSTGRESQL - Platform Database
+  # ========================================
+  # General-purpose PostgreSQL for the platform.
+  # Only runs in local/dev environments via profile.
+  postgres:
+    profiles: ["local"]  # Only start with --profile local or in dev override
+    image: postgres:15-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-postgres
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-octavios}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-secure_postgres_password}
+      - POSTGRES_DB=${POSTGRES_DB:-octavios}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-octavios} -d ${POSTGRES_DB:-octavios}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - octavios-network
+
+  # ========================================
+  # FILE MANAGER - Public Plugin Service (Rust-Accelerated)
+  # ========================================
+  # Plugin-First Architecture: Public plugin for file operations
+  # Other plugins consume files from this service
+  # Performance: Rust native modules for 10-50x speedup
+  # Protocols: HTTP (8001), gRPC (50052)
+  file-manager:
+    build:
+      context: ..
+      dockerfile: plugins/public/file-manager/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-file-manager
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    environment:
+      # HTTP Server
+      - PORT=8001
+      # gRPC Server (high-performance file operations)
+      - GRPC_PORT=50052
+      - GRPC_ENABLED=${FILE_MANAGER_GRPC_ENABLED:-true}
+      # MinIO Object Storage
+      - MINIO_ENDPOINT=minio:9000
+      - MINIO_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - MINIO_BUCKET_DOCUMENTS=documents
+      # Redis Cache
+      - REDIS_URL=redis://:$REDIS_PASSWORD@redis:6379/0
+      # File Processing
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - OCR_MAX_PAGES=${OCR_MAX_PAGES:-30}
+      - OCR_RASTER_DPI=${OCR_RASTER_DPI:-180}
+      - OCR_QUALITY_RATIO=${OCR_QUALITY_RATIO:-0.4}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "${FILE_MANAGER_PORT:-8001}:8001"       # HTTP REST API
+      - "${FILE_MANAGER_GRPC_PORT:-50052}:50052" # gRPC API
+    # No volumes in base - src volume added in docker-compose.dev.yml for development hot reload
+    depends_on:
+      minio:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - octavios-network
+
+  # ========================================
+  # RETAIL ADVISOR - Domain Analytics Plugin (MCP over HTTP)
+  # ========================================
+  # Slot del plugin de dominio (se define en las fases siguientes).
+  # Protocolo: MCP sobre HTTP (:8002, endpoint /mcp). Health en /health.
+  # ========================================
+  # EMBEDDING SERVICE - Public Plugin for Text Embeddings
+  # ========================================
+  # Plugin-First Architecture: Delegates sentence-transformers to plugin
+  # Model: paraphrase-multilingual-MiniLM-L12-v2 (384 dims)
+  # Protocols: HTTP (8003), gRPC (50053)
+  # OPTIMIZATION 2026-01: Saves ~1.15GB from backend image
+  embedding-service:
+    build:
+      context: ..
+      dockerfile: plugins/public/embedding-service/Dockerfile
+    container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-embedding-service
+    restart: unless-stopped
+    env_file:
+      - ../envs/.env
+    environment:
+      # HTTP Server
+      - PORT=8003
+      # gRPC Server
+      - GRPC_PORT=50053
+      # Model Configuration
+      - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-paraphrase-multilingual-MiniLM-L12-v2}
+      - EMBEDDING_DEVICE=${EMBEDDING_DEVICE:-cpu}
+      # Chunking Parameters
+      - EMBEDDING_CHUNK_SIZE_TOKENS=${EMBEDDING_CHUNK_SIZE_TOKENS:-500}
+      - EMBEDDING_CHUNK_OVERLAP_TOKENS=${EMBEDDING_CHUNK_OVERLAP_TOKENS:-100}
+      # Cache Configuration
+      - EMBEDDING_QUERY_CACHE_SIZE=${EMBEDDING_QUERY_CACHE_SIZE:-1000}
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "${EMBEDDING_SERVICE_PORT:-8003}:8003"        # HTTP REST API
+      - "${EMBEDDING_SERVICE_GRPC_PORT:-50053}:50053" # gRPC API
+    # No volumes in base - src volume added in docker-compose.dev.yml for development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s  # Model loading takes ~60s on first start
+    networks:
+      - octavios-network
+
+  # ========================================
+  # PRODUCTION METRICS DASHBOARD
+  # ========================================
+  # Standalone Plotly Dash application for monitoring production metrics
+  # Provides real-time KPIs for users, conversations, feedback, and infrastructure
+  # Access: http://localhost:8050 (requires authentication)
+# ========================================
+# VOLUMES
+# ========================================
+volumes:
+  # Data volumes - simple Docker-managed volumes for development
+  # For production bind mounts, override these in docker-compose.prod.yml
+  mongodb_data:
+    driver: local
+
+  mongodb_config:
+    driver: local
+
+  redis_data:
+    driver: local
+
+  minio_data:
+    driver: local
+
+  # PostgreSQL (platform database)
+  postgres_data:
+    driver: local
+
+  # These volumes always use Docker-managed storage
+  nginx_logs:
+    driver: local
+
+  # Next.js build cache volumes to avoid permission issues
+  next_cache:
+    driver: local
+  next_standalone_cache:
+    driver: local
+
+  # Weaviate persistent storage
+  weaviate_data:
+    driver: local
+
+  # Web node_modules persistence (survive container recreation)
+  web_node_modules:
+    driver: local
+
+  # NOTE: backend_shared volume removed - caused Docker Desktop/WSL mount issues
+
+# ========================================
+# NETWORKS
+# ========================================
+networks:
+  octavios-network:
+    driver: bridge

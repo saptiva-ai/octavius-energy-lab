@@ -1,0 +1,88 @@
+# ========================================
+# PRODUCTION OVERRIDE - COPILOT OS
+# ========================================
+# Use with: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
+# Purpose: Explicitly disable development features for production deployments
+# - Removes hot reload volumes (no source code mounts)
+# - Ensures production build targets
+# - Disables development-only services
+# ========================================
+
+# Logs de contenedor con tope: sin esto la EC2 acumulaba 663 MB en
+# /var/lib/docker/containers (2026-11-06). Aplica al recrear cada servicio
+# (cada blue/green lo hace).
+x-logging: &logging_acotado
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
+services:
+  # ========================================
+  # BACKEND - Production Mode
+  # ========================================
+  backend:
+    logging: *logging_acotado
+    build:
+      target: production  # Explicitly use production build stage
+    environment:
+      - NODE_ENV=production
+      - DEBUG=false
+      - LOG_LEVEL=info
+      - RATE_LIMIT_ENABLED=true
+      - DEEP_RESEARCH_KILL_SWITCH=true
+      - DEEP_RESEARCH_ENABLED=false
+      # Paso "decide" del function calling: nemotron-3.5-lightning por
+      # InferNode, el modelo con el que se midieron el ruteo y el examen
+      # sellado desde el 12 de octubre (ronda del 14 de octubre: 51/51 en
+      # 2.3 s; gemma 49/51). qwen3.6-35b sigue descartado: agota el turno
+      # razonando y no emite tool_calls (2026-09-02). Ops afina con
+      # RETAIL_ADVISOR_DECIDE_MODEL_PROD.
+      - RETAIL_ADVISOR_DECIDE_MODEL=${RETAIL_ADVISOR_DECIDE_MODEL_PROD:-nemotron-3.5-lightning}
+      # Narración de turnos con datos: gemma en 2.3-3.1 s contra 15.7-23.8 s de
+      # qwen3.6-27b, que además devolvió una vacía de nueve (medido 2026-09-03,
+      # tests/evals/bench_narracion.py). En una demo en vivo eso se ve.
+      - RETAIL_ADVISOR_NARRATION_MODEL=${RETAIL_ADVISOR_NARRATION_MODEL_PROD:-gemma-4-26b}
+      # Critical secrets - must be set via environment or .env file
+      - SECRET_KEY=${SECRET_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+    # No volumes needed - base has no hot reload mounts
+    # Production runs as container user (not host UID/GID for better security)
+    user: ""
+
+  # ========================================
+  # FRONTEND - Production Mode
+  # ========================================
+  web:
+    logging: *logging_acotado
+    build:
+      target: runner  # Next.js production build stage
+    environment:
+      - NODE_ENV=production
+      - DEEP_RESEARCH_ENABLED=false
+    # No volumes needed - base has no hot reload mounts
+    user: "${UID:-1000}:${GID:-1000}"  # Keep user for file permissions
+    command: []  # Use default CMD from Dockerfile (node server.js)
+
+  # ========================================
+  # FILE MANAGER - Production Mode
+  # ========================================
+  file-manager:
+    logging: *logging_acotado
+    environment:
+      - LOG_LEVEL=INFO
+    # No volumes needed - base has no hot reload mounts
+    user: ""
+
+  # ========================================
+  # RETAIL ADVISOR - Production Mode
+  # ========================================
+  # ========================================
+  # NGINX - Production Edge (enabled)
+  # ========================================
+  # Note: nginx profile is already set to "production" in base docker-compose.yml
+  # It will automatically be included when using --profile production
+
+volumes:
+  # Store de learnings del plugin (MEM-1); sobrevive a recrear el contenedor
+  # y lo comparten blue y green durante un rollout.

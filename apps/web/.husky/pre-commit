@@ -1,0 +1,24 @@
+#!/bin/bash
+# Husky pre-commit hook for Octavius 2.0
+# Runs: 1) Python cache cleanup, 2) Secrets detection, 3) Linting & formatting
+
+set -e
+
+# Navigate to project root
+cd "$(git rev-parse --show-toplevel)"
+
+# STEP 0: Cleanup Python caches (silent, always succeeds)
+bash scripts/git-hooks/cleanup-python-cache.sh || true
+
+# STEP 1: Run secrets detection
+echo "🔒 Running secrets detection..."
+bash scripts/git-hooks/git-secrets-check.sh --staged
+if [ $? -ne 0 ]; then
+    echo "❌ Commit blocked: Secrets detected"
+    exit 1
+fi
+
+# STEP 2: Run lint-staged for code quality
+echo "🧹 Running linters and formatters..."
+cd apps/web
+npx lint-staged

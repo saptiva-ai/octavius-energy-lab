@@ -1,0 +1,245 @@
+# ============================================================================
+# Compliance Configuration for Copiloto Audit
+# ============================================================================
+#
+# This file defines compliance rules for document validation:
+# - Disclaimer templates (parametrized with {CLIENTE})
+# - Fuzzy matching tolerance (0-1, where 1 = exact match)
+# - Per-page coverage requirements
+#
+# Usage:
+#   from services.compliance_auditor import load_compliance_config
+#   config = load_compliance_config()
+#   templates = config["disclaimers"]["templates"]
+#
+
+disclaimers:
+  # Global tolerance for fuzzy matching (0.90 = 90% similarity required)
+  # Lower values = more strict, Higher values = more permissive
+  default_tolerance: 0.85  # 85% similarity (allows minor variations)
+
+  # Minimum pages that must contain a valid disclaimer (as fraction of total pages)
+  # 1.0 = all pages, 0.5 = at least half, 0.0 = at least one page
+  min_coverage: 1.0
+
+  # Severity for missing disclaimers
+  missing_severity: "high"
+
+  # Template definitions
+  # Use {CLIENTE} placeholder for parametrized matching
+  # The auditor will try all templates and use the best match
+  templates:
+    # ========================================================================
+    # Demo Capital Standard Templates
+    # ========================================================================
+
+    - id: "demo-std-es-v1"
+      name: "Demo Capital - Standard ES (v1)"
+      text: "Este documento es confidencial y dirigido exclusivamente a {CLIENTE} por Demo Capital."
+      language: "es"
+      active: true
+      notes: "Plantilla estándar más usada"
+
+    - id: "demo-std-es-v2"
+      name: "Demo Capital - Standard ES (v2)"
+      text: "Documento confidencial elaborado por Demo Capital para uso exclusivo de {CLIENTE}."
+      language: "es"
+      active: true
+      notes: "Variante corta"
+
+    - id: "demo-legal-es"
+      name: "Demo Capital - Legal ES"
+      text: "Información reservada para {CLIENTE}. Queda prohibida su divulgación sin autorización expresa de Demo Capital."
+      language: "es"
+      active: true
+      notes: "Con lenguaje legal más fuerte"
+
+    # ========================================================================
+    # Client-Specific Templates (Examples)
+    # ========================================================================
+
+    - id: "bancomuestra-custom"
+      name: "BancoMuestra - Custom Template"
+      text: "Este análisis ha sido preparado exclusivamente para {CLIENTE} por Demo Capital. Prohibida su reproducción total o parcial."
+      language: "es"
+      active: true
+      notes: "Template específico para BancoMuestra (ejemplo)"
+
+    - id: "bancoejemplo-custom"
+      name: "BancoEjemplo - Custom Template"
+      text: "Material confidencial destinado únicamente a {CLIENTE}. Elaborado por Demo Capital."
+      language: "es"
+      active: false  # Disabled - enable when needed
+      notes: "Template específico para BancoEjemplo (ejemplo)"
+
+    # ========================================================================
+    # English Templates (Disabled by default)
+    # ========================================================================
+
+    - id: "demo-std-en-v1"
+      name: "Demo Capital - Standard EN (v1)"
+      text: "This document is confidential and intended exclusively for {CLIENTE} by Demo Capital."
+      language: "en"
+      active: false
+      notes: "English version for international clients"
+
+    - id: "demo-legal-en"
+      name: "Demo Capital - Legal EN"
+      text: "Confidential information for {CLIENTE}. Unauthorized disclosure is prohibited. Prepared by Demo Capital."
+      language: "en"
+      active: false
+      notes: "English legal version"
+
+# Logo validation rules
+logo:
+  # Template image path (relative to config dir or absolute)
+  template_path: "assets/logo_template.png"
+
+  # Minimum similarity score (OpenCV template matching)
+  min_similarity: 0.75
+
+  # Minimum logo area (pixels²)
+  min_area: 5000
+
+  # Required pages (1-indexed, or "first" and "last" keywords)
+  required_pages:
+    - "first"  # Cover page
+    - "last"   # Back cover
+
+  # Severity for missing/incorrect logo
+  missing_severity: "high"
+
+# Format validation rules
+format:
+  # Number formatting rules (regional)
+  numeric_format:
+    enabled: true
+    style: "MX"                # MX => miles "," decimales "."
+    thousand_sep: ","
+    decimal_sep: "."
+    min_decimals: 2
+    max_decimals: 2
+    severity: "high"
+
+    # Examples:
+    # ✅ Correcto:  $1.234,56  €2.500.000,00  5,70%
+    # ❌ Incorrecto: $1,234.56  €2,500,000.00  5.7%
+
+  # Font whitelist (Demo Capital approved fonts)
+  fonts:
+    allowed:
+      # Preferred fonts
+      - "Arial"           # Sans-serif (most common)
+      - "Calibri"         # Sans-serif (modern, clean)
+      - "Helvetica"       # Sans-serif (classic)
+
+      # Acceptable alternatives
+      - "Times New Roman" # Serif (for formal documents)
+      - "Georgia"         # Serif (readable)
+      - "Verdana"         # Sans-serif (web-friendly)
+
+      # Allow variations (Bold, Italic, etc)
+      - "Arial-Bold"
+      - "Arial-BoldMT"
+      - "Calibri-Bold"
+      - "Helvetica-Bold"
+
+    severity: "medium"
+    notes: "Fonts must be in corporate guidelines. Avoid Comic Sans, Papyrus, etc."
+
+typography:
+  enabled: true
+  heading_font_threshold: 18
+  max_heading_levels: 5
+  min_line_spacing: 0.5
+  max_line_spacing: 2.5
+  severity_heading: "low"
+  severity_spacing: "low"
+
+  # Font size ranges (points)
+  font_sizes:
+    min: 8    # Minimum readable size (footers, footnotes)
+    max: 72   # Maximum size (titles, covers)
+    recommended_body: 11  # Body text should be 10-12pt
+    severity: "low"
+
+  # Color palette (Demo Capital brand identity)
+  colors:
+    palette:
+      # ====================================================================
+      # Primary Brand Colors
+      # ====================================================================
+      - "#002B5C"  # Navy Blue (Demo Capital primary)
+      - "#FFFFFF"  # White (backgrounds)
+      - "#000000"  # Black (text)
+
+      # ====================================================================
+      # Secondary Colors
+      # ====================================================================
+      - "#4A90E2"  # Light Blue (charts, accents)
+      - "#7F8C8D"  # Gray (neutral elements)
+      - "#95A5A6"  # Light Gray (borders, dividers)
+      - "#ECF0F1"  # Very Light Gray (backgrounds)
+
+      # ====================================================================
+      # Accent Colors (Data Visualization)
+      # ====================================================================
+      - "#E74C3C"  # Red (negative metrics, alerts)
+      - "#27AE60"  # Green (positive metrics, growth)
+      - "#F39C12"  # Orange (warnings, highlights)
+      - "#3498DB"  # Blue (links, info)
+      - "#9B59B6"  # Purple (special categories)
+
+      # ====================================================================
+      # Extended Palette (Charts)
+      # ====================================================================
+      - "#1ABC9C"  # Teal
+      - "#E67E22"  # Dark Orange
+      - "#34495E"  # Dark Blue-Gray
+      - "#16A085"  # Dark Teal
+      - "#2ECC71"  # Bright Green
+
+    # Allow colors within N% variance (RGB distance)
+    # 0.1 = 10% tolerance (recommended)
+    # 0.05 = 5% tolerance (strict)
+    # 0.15 = 15% tolerance (permissive)
+    tolerance: 0.12  # 12% tolerance for printer variations
+
+    severity: "low"
+
+    notes: |
+      Colors outside the palette may be acceptable for:
+      - Client logos (if required)
+      - Stock images (photos)
+      - Charts with >10 data series
+      - Violations should be reviewed case-by-case.
+  images:
+    max_ratio: 0.65        # Flag images covering more than 65% of page
+    min_ratio: 0.02        # Flag images smaller than 2% (possible glitches)
+    severity: "low"
+    notes: "Las proporciones extremas pueden indicar errores de diseño o imágenes mal recortadas."
+
+# Grammar and spelling validation (LanguageTool)
+grammar:
+  enabled: true
+  language: "es"
+  severity:
+    spelling: "low"
+    grammar: "medium"
+  max_issues_per_page: 30
+  top_examples: 5
+  disabled_rules:
+    - "WHITESPACE_RULE"
+    - "DOUBLE_PUNCTUATION"
+    - "UNPAIRED_BRACKETS"
+
+# Observability
+observability:
+  # Log structured events for each validation stage
+  structured_logging: true
+
+  # Prometheus metrics prefix
+  metrics_prefix: "copiloto_414_validation"
+
+  # Sample rate for detailed payloads (0.0 - 1.0)
+  payload_sample_rate: 0.1

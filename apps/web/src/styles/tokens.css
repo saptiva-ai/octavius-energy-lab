@@ -1,0 +1,118 @@
+/**
+ * SAPTIVA Design Tokens
+ * Sistema de tokens para UI consistente
+ */
+
+/* === BUTTON TOKENS === */
+.btn-sm {
+  height: 36px;
+  padding: 0 12px;
+  font-size: 0.875rem; /* 14px */
+  border-radius: 12px;
+  @apply inline-flex items-center justify-center font-semibold transition-colors;
+}
+
+.btn-md {
+  height: 44px;
+  padding: 0 16px;
+  font-size: 1rem; /* 16px */
+  border-radius: 12px;
+  @apply inline-flex items-center justify-center font-semibold transition-colors;
+}
+
+.btn-lg {
+  height: 52px;
+  padding: 0 20px;
+  font-size: 1.125rem; /* 18px */
+  border-radius: 16px;
+  @apply inline-flex items-center justify-center font-semibold transition-colors;
+}
+
+/* === CHIP TOKENS === */
+.chip {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.875rem; /* 14px */
+  border-radius: 16px;
+  @apply inline-flex items-center justify-center font-medium transition-colors;
+}
+
+.chip-sm {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 0.75rem; /* 12px */
+  border-radius: 14px;
+  @apply inline-flex items-center justify-center font-medium transition-colors;
+}
+
+/* === RESPONSIVE GRID TOKENS === */
+.grid-responsive {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6;
+}
+
+.grid-responsive-tight {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4;
+}
+
+.grid-responsive-wide {
+  @apply grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8;
+}
+
+/* === CARD TOKENS === */
+.card-base {
+  @apply min-h-[180px] p-6 md:p-7 rounded-xl border border-border bg-surface shadow-card;
+}
+
+.card-interactive {
+  @apply card-base transition-all duration-200 hover:border-primary/60 hover:bg-surface-2 cursor-pointer;
+}
+
+/* === CONTAINER TOKENS === */
+.container-saptiva {
+  @apply mx-auto w-full max-w-[1200px] px-4 sm:px-6 lg:px-8;
+}
+
+/* === TYPE SCALE TOKENS === */
+/* Escala exacta del plan: sm:13, base:15, lg:18, xl:24 */
+.text-scale-sm { font-size: 13px; }       /* Plan: sm:13 */
+.text-scale-base { font-size: 15px; }     /* Plan: base:15 */
+.text-scale-lg { font-size: 18px; }       /* Plan: lg:18 */
+.text-scale-xl { font-size: 24px; }       /* Plan: xl:24 */
+/* Extras para compatibilidad */
+.text-scale-xs { font-size: 12px; }
+.text-scale-2xl { font-size: 32px; }
+
+/* === CSS VARIABLES DARK THEME === */
+:root {
+  /* Updated dark theme palette */
+  --color-bg: #0B1217;
+  --color-surface: #121A21;
+  --color-surface-2: #18222C;
+  --color-border: #1F2A33;
+  --color-text: #E6E8EB;
+  --color-text-muted: #9AA4AF;
+  --color-primary: #49F7D9;
+  --color-primary-600: #2DC4AE;
+  --color-primary-700: #1EA595;
+  --color-success: #49F7D9;
+  --color-warning: #F4C430;
+  --color-danger: #F87171;
+  --color-link: #49F7D9;
+
+  /* Tipografía del plan */
+  --font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  /* Sizes del plan */
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 24px;
+
+  /* Radii del plan */
+  --border-radius-card: 12px;
+
+  /* Shadows del plan */
+  --shadow-card: 0 6px 20px rgba(0,0,0,0.24);
+}

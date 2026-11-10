@@ -1,0 +1,206 @@
+// =============================================================================
+// OctaviOS Embedding Service - gRPC Service Definition
+// =============================================================================
+// High-performance text embedding generation via gRPC (HTTP/2)
+// Port: 50053
+// Model: paraphrase-multilingual-MiniLM-L12-v2 (384 dims)
+// =============================================================================
+
+syntax = "proto3";
+
+package embedding;
+
+// ============================================================================
+// Core Messages
+// ============================================================================
+
+// Single embedding vector
+message Embedding {
+  repeated float values = 1;  // 384 floats for MiniLM
+  int32 dimension = 2;
+}
+
+// Chunk metadata for document processing
+message ChunkMetadata {
+  int32 chunk_id = 1;
+  int32 start_char = 2;
+  int32 end_char = 3;
+  int32 page = 4;
+  map<string, string> custom = 5;
+}
+
+// A text chunk with its embedding
+message EmbeddedChunk {
+  int32 chunk_id = 1;
+  string text = 2;
+  Embedding embedding = 3;
+  int32 page = 4;
+  map<string, string> metadata = 5;
+}
+
+// ============================================================================
+// Encode Service Messages
+// ============================================================================
+
+// Request to encode multiple texts
+message EncodeRequest {
+  repeated string texts = 1;
+  int32 batch_size = 2;  // Default: 32
+}
+
+// Response with embeddings
+message EncodeResponse {
+  repeated Embedding embeddings = 1;
+  int32 dimension = 2;
+  int32 count = 3;
+  int64 processing_time_ms = 4;
+}
+
+// Request to encode a single text
+message EncodeSingleRequest {
+  string text = 1;
+  bool use_cache = 2;  // Default: true
+}
+
+// Response with single embedding
+message EncodeSingleResponse {
+  Embedding embedding = 1;
+  bool cached = 2;
+  int64 processing_time_ms = 3;
+}
+
+// ============================================================================
+// Chunk and Embed Messages (RAG Ingestion)
+// ============================================================================
+
+// Request to chunk and embed text
+message ChunkAndEmbedRequest {
+  string text = 1;
+  int32 page = 2;  // Page number for metadata
+  map<string, string> metadata = 3;
+  int32 batch_size = 4;  // Default: 32
+}
+
+// Response with chunked and embedded text
+message ChunkAndEmbedResponse {
+  repeated EmbeddedChunk chunks = 1;
+  int32 total_chunks = 2;
+  int32 dimension = 3;
+  int64 processing_time_ms = 4;
+}
+
+// ============================================================================
+// Batch Operations
+// ============================================================================
+
+// Document for batch processing
+message Document {
+  string id = 1;
+  string text = 2;
+  int32 page = 3;
+  map<string, string> metadata = 4;
+}
+
+// Request to process multiple documents
+message BatchChunkAndEmbedRequest {
+  repeated Document documents = 1;
+  int32 batch_size = 2;
+}
+
+// Result for a single document
+message DocumentResult {
+  string document_id = 1;
+  repeated EmbeddedChunk chunks = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+// Response for batch document processing
+message BatchChunkAndEmbedResponse {
+  repeated DocumentResult results = 1;
+  int32 total_chunks = 2;
+  int64 total_processing_time_ms = 3;
+}
+
+// ============================================================================
+// Model Information
+// ============================================================================
+
+message ModelInfoRequest {}
+
+message ModelInfoResponse {
+  string model_name = 1;
+  int32 dimension = 2;
+  string device = 3;  // "cpu" | "cuda"
+  int32 chunk_size_tokens = 4;
+  int32 chunk_overlap_tokens = 5;
+  int32 cache_size = 6;
+  int32 cache_used = 7;
+}
+
+// ============================================================================
+// Cache Management
+// ============================================================================
+
+message ClearCacheRequest {}
+
+message ClearCacheResponse {
+  int32 entries_removed = 1;
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;  // "healthy" | "degraded" | "unhealthy"
+  bool model_loaded = 2;
+  string model_name = 3;
+  int32 dimension = 4;
+  int64 model_load_time_ms = 5;
+}
+
+// ============================================================================
+// Service Definition
+// ============================================================================
+
+service EmbeddingService {
+  // ==========================================================================
+  // Encoding Operations
+  // ==========================================================================
+
+  // Encode multiple texts (batch)
+  rpc Encode(EncodeRequest) returns (EncodeResponse);
+
+  // Encode single text (with caching)
+  rpc EncodeSingle(EncodeSingleRequest) returns (EncodeSingleResponse);
+
+  // ==========================================================================
+  // RAG Ingestion Operations
+  // ==========================================================================
+
+  // Chunk text and generate embeddings
+  rpc ChunkAndEmbed(ChunkAndEmbedRequest) returns (ChunkAndEmbedResponse);
+
+  // Process multiple documents (streaming results)
+  rpc BatchChunkAndEmbed(BatchChunkAndEmbedRequest) returns (stream DocumentResult);
+
+  // ==========================================================================
+  // Model & Cache Management
+  // ==========================================================================
+
+  // Get model information
+  rpc GetModelInfo(ModelInfoRequest) returns (ModelInfoResponse);
+
+  // Clear query embedding cache
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+
+  // ==========================================================================
+  // Health Check
+  // ==========================================================================
+
+  // Service health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}

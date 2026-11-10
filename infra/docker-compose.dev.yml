@@ -1,0 +1,117 @@
+services:
+  web:
+    # Keep the Bun-based development image separate from the Node-only
+    # production runner. Both compose modes previously reused the implicit
+    # `<project>-web` tag, so the last build could leave `make dev` executing
+    # the Bun command on a runner image where Bun does not exist.
+    image: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-web-dev
+    # /chat first compile pulls heavy client bundles (plotly, markdown, canvas state).
+    # 3 GiB still spikes in this workspace, so leave 4 GiB headroom for dev stability.
+    mem_limit: 4096m
+    mem_reservation: 1536m
+    user: "${UID:-1000}:${GID:-1000}"         # corre como tu usuario, no root
+    build:
+      target: dev
+    command:
+      - /bin/sh
+      - -c
+      - |
+        # Ensure .next directory has correct permissions
+        mkdir -p /app/apps/web/.next
+        # Install/update dependencies with bun
+        echo "🟡 Installing dependencies with bun..."
+        cd /app && bun install --frozen-lockfile
+        # Start development server
+        cd /app/apps/web && bun run dev --hostname 0.0.0.0 --port 3000
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-}
+      # Tools encendidas y fijas (sin chip): la herramienta de datos en la PoC.
+      - NEXT_PUBLIC_DEFAULT_TOOLS=${NEXT_PUBLIC_DEFAULT_TOOLS:-}
+      - DEEP_RESEARCH_ENABLED=${DEEP_RESEARCH_ENABLED:-true}
+      # Keep Next.js dev server persistent in local Docker sessions.
+      - CI=false
+    volumes:
+      - ../bun.lock:/app/bun.lock:ro
+      - ../package.json:/app/package.json:ro
+      - ../packages:/app/packages
+      - ../apps/web:/app/apps/web
+      # Named volume to preserve container-installed dependencies
+      # This overrides the bind mount for node_modules specifically
+      - web_node_modules:/app/apps/web/node_modules
+      # .next uses host directory directly (bind mount inherits host perms)
+
+  backend:
+    mem_limit: 512m
+    mem_reservation: 256m
+    user: "${UID:-1000}:${GID:-1000}"  # Run as host user for volume permissions
+    build:
+      target: development  # Use development stage with pytest and testing tools
+    env_file:
+      - ../envs/.env
+    volumes:
+      # Mount source code for hot reload
+      - ../apps/backend/src:/app/src
+      - ../apps/backend/tests:/app/tests:ro
+      - ../apps/backend/pytest.ini:/app/pytest.ini:ro
+      - ../apps/backend/.coveragerc:/app/.coveragerc:ro
+      # Prompts = config iterable en dev (registry de system prompts)
+      - ../apps/backend/prompts:/app/prompts:ro
+    environment:
+      - DEEP_RESEARCH_ENABLED=${DEEP_RESEARCH_ENABLED:-true}
+      - TABLE_MODE_SEMANTIC_ENABLED=${TABLE_MODE_SEMANTIC_ENABLED:-false}
+      - TABLE_MODE_SEMANTIC_THRESHOLD=${TABLE_MODE_SEMANTIC_THRESHOLD:-0.62}
+      - TABLE_MODE_SEMANTIC_MIN_MARGIN=${TABLE_MODE_SEMANTIC_MIN_MARGIN:-0.05}
+      - DATA_MODEL_ROUTING_ENABLED=${DATA_MODEL_ROUTING_ENABLED:-false}
+      # Paso "decide" del function calling: modelo SIN thinking. qwen3.6-35b
+      # razona hasta la tool correcta y luego se queda dudando si pasar la
+      # tienda (agota el turno con finish=stop y cero tool_calls; eval de
+      # routing 3/18, medido 2026-09-02). gemma-4-26b decide en ~25 tokens y
+      # eligió bien en todos los fraseos de la demo. Pisa el valor del
+      # env_file; Ops afina con RETAIL_ADVISOR_DECIDE_MODEL_DEV sin tocar el
+      # repo. Al promover a un compose sin overlay, fijar el equivalente en
+      # el env del despliegue.
+      - RETAIL_ADVISOR_DECIDE_MODEL=${RETAIL_ADVISOR_DECIDE_MODEL_DEV:-gemma-4-26b}
+      # Narración de un turno que YA trae datos: mismo criterio que el decide.
+      # Medido 2026-09-03 (tests/evals/bench_narracion.py) sobre los contextos
+      # de la demo: gemma narra en 2.3-3.1 s sin razonar; qwen3.6-27b tarda
+      # 15.7-23.8 s y devolvió una respuesta vacía de nueve. La conversación
+      # sin tools conserva el modelo que elige el usuario.
+      - RETAIL_ADVISOR_NARRATION_MODEL=${RETAIL_ADVISOR_NARRATION_MODEL_DEV:-gemma-4-26b}
+      - PYTHONPATH=/usr/local/lib/python3.11/site-packages:/app/src  # Ensure vendor MCP takes precedence
+      - COVERAGE_FILE=/tmp/.coverage
+
+  file-manager:
+    mem_limit: 256m
+    mem_reservation: 128m
+    volumes:
+      # Mount source code for hot reload
+      - ../plugins/public/file-manager/src:/app/src
+
+  mongodb:
+    mem_limit: 512m
+    mem_reservation: 256m
+
+  redis:
+    mem_limit: 128m
+    mem_reservation: 64m
+
+  minio:
+    mem_limit: 256m
+    mem_reservation: 128m
+
+  embedding-service:
+    # Con el modelo cargado (MiniLM multilingüe) usa 1.06-1.09 GB (sonda de
+    # definiciones, 2026-10-21); con 256m se reinicia al primer /encode,
+    # igual que en el gate vectorial de julio. Carga perezosa: en reposo
+    # ocupa unos 9 MB y el límite solo se usa si algo pide embeddings.
+    mem_limit: 1536m
+    mem_reservation: 128m
+
+  # Enable postgres in local/dev (disabled in production via profile)
+  postgres:
+    profiles: []  # Override: remove profile restriction to enable in dev
+
+volumes:
+  web_node_modules:
+    driver: local

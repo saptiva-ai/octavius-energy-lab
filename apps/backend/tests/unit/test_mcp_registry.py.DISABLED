@@ -1,0 +1,68 @@
+"""Unit tests for MCP registry and routes."""
+
+from __future__ import annotations
+
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+from pydantic import BaseModel
+
+from backend.mcp.base import BaseTool
+from backend.mcp.protocol import ToolInvokeContext, ToolLimits
+from backend.mcp.registry import ToolRegistry
+from backend.mcp.routes import create_mcp_router
+
+
+class EchoInput(BaseModel):
+    text: str
+
+
+class EchoOutput(BaseModel):
+    echoed: str
+
+
+class EchoTool(BaseTool):
+    name = "echo"
+    input_model = EchoInput
+    output_model = EchoOutput
+    limits = ToolLimits(timeout_ms=2000, max_payload_kb=4)
+
+    async def _execute(self, payload: EchoInput, context):
+        return {"echoed": payload.text.upper()}
+
+
+def test_registry_invocation_success():
+    registry = ToolRegistry()
+    registry.register(EchoTool())
+
+    response = registry.resolve("echo")
+    assert response.name == "echo"
+
+    import asyncio
+
+    result = asyncio.run(
+        registry.invoke(
+            tool_name="echo",
+            payload={"text": "hola"},
+            version=None,
+            context=ToolInvokeContext(request_id="req-1"),
+        )
+    )
+    assert result.ok is True
+    assert result.output == {"echoed": "HOLA"}
+
+
+def test_mcp_routes_list_and_invoke():
+    registry = ToolRegistry()
+    registry.register(EchoTool())
+
+    app = FastAPI()
+    app.include_router(create_mcp_router(registry=registry), prefix="/api")
+    client = TestClient(app)
+
+    tools_response = client.get("/api/mcp/tools")
+    assert tools_response.status_code == 200
+    assert any(tool["name"] == "echo" for tool in tools_response.json()["tools"])
+
+    invoke_response = client.post("/api/mcp/invoke", json={"tool": "echo", "payload": {"text": "team"}})
+    assert invoke_response.status_code == 200
+    assert invoke_response.json()["output"]["echoed"] == "TEAM"

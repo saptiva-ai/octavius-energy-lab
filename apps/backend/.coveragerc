@@ -1,0 +1,60 @@
+[run]
+data_file = /tmp/.coverage
+source = src
+omit =
+    # Auto-generated protobuf/gRPC stubs (not meaningful to unit test)
+    src/proto_stubs/generated/*_pb2.py
+    src/proto_stubs/generated/*_pb2_grpc.py
+    # Deprecated services
+    src/services/qdrant_service_deprecated.py
+    # Core infrastructure (tested via integration)
+    src/core/auth.py
+    src/core/config.py
+    src/core/crypto.py
+    src/core/database.py
+    src/core/exceptions.py
+    src/core/logging.py
+    src/core/redis_cache.py
+    src/core/secrets.py
+    src/core/telemetry.py
+    src/domain/*
+    src/middleware/*
+    src/models/*
+    src/routers/*
+    src/schemas/*
+    src/services/__init__.py
+    src/services/aletheia_client.py
+    src/services/aletheia_streaming.py
+    src/services/auth_service.py
+    src/services/cache_service.py
+    src/services/chat_service.py
+    src/services/color_auditor.py
+    src/services/deep_research_service.py
+    src/services/document_extraction.py
+    src/services/document_service.py
+    src/services/extractors/*
+    src/services/file_events.py
+    src/services/file_ingest.py
+    src/services/files_presign.py
+    src/services/history_service.py
+    src/services/history_stream.py
+    src/services/idempotency.py
+    src/services/intent_service.py
+    src/services/languagetool_client.py
+    src/services/llm_message_serializer.py
+    src/services/minio_service.py
+    src/services/ocr_service.py
+    src/services/research_coordinator.py
+    src/services/review_service.py
+    src/services/saptiva_client.py
+    src/services/settings_service.py
+    src/services/storage.py
+    src/services/streaming_service.py
+    src/services/tools.py
+    src/tests/*
+    src/utils/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
