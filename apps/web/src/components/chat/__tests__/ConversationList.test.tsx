@@ -168,7 +168,7 @@ describe("ConversationList", () => {
 });
 
 describe("ConversationList · nombre del producto", () => {
-  it("el encabezado del historial dice Industry Advisor, no OctaviOS Chat", () => {
+  it("el encabezado del historial dice Energy Ontology Advisor, no OctaviOS Chat", () => {
     // feedback round 1 (2026-10-16, punto 11).
     render(
       <ConversationList
@@ -179,6 +179,6 @@ describe("ConversationList · nombre del producto", () => {
       />,
     );
     expect(screen.queryByText(/OctaviOS Chat/)).toBeNull();
-    expect(screen.getAllByText("Industry Advisor").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Energy Ontology Advisor").length).toBeGreaterThan(0);
   });
 });

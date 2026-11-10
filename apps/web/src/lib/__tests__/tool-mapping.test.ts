@@ -34,7 +34,7 @@ describe("normalizeToolsState", () => {
   it("la herramienta de datos no se apaga aunque el estado guardado diga false", () => {
     // feedback round 1 (2026-10-16, punto 10): con el chip apagado
     // el chat contestaba "la herramienta está desactivada, actívala desde el
-    // compositor". En Industry Advisor la herramienta de datos va siempre.
+    // compositor". En Energy Ontology Advisor la herramienta de datos va siempre.
     const state = normalizeToolsState({ retail_advisor: false });
     expect(state.retail_advisor).toBe(true);
   });

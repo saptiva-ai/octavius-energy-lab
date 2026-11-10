@@ -43,6 +43,11 @@ services:
         condition: service_healthy
 
   web:
+    build:
+      args:
+        # La herramienta de datos va siempre encendida: el backend exige este
+        # valor para ofrecerle las herramientas MCP al modelo.
+        NEXT_PUBLIC_DEFAULT_TOOLS: retail_advisor
     ports: !override ["127.0.0.1:3000:3000"]
 
   semantic-adapter:

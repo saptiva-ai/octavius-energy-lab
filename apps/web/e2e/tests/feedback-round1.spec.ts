@@ -7,7 +7,7 @@
  * - Punto 9: Copy y Regenerate se leen en tema claro.
  * - Punto 10: la herramienta de datos va fija por despliegue, sin chip
  *   (2026-10-19); sigue encendida en el payload de /api/chat.
- * - Punto 11: el historial dice Industry Advisor.
+ * - Punto 11: el historial dice Energy Ontology Advisor.
  * - Punto 12: el feedback llega a POST /api/feedback con el id del chat.
  * - Puntos 14 y 15: el modal lista las vistas del plugin, sin benchmark,
  *   y las preguntas sugeridas que antes eran chips bajo el compositor, con

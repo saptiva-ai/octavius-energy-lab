@@ -85,7 +85,7 @@ const DEFAULT_ON_TOOL_KEYS: ReadonlySet<ToolKey> = defaultToolKeysFromEnv(
 );
 
 /**
- * Tools que el usuario no puede apagar. En Industry Advisor la herramienta de
+ * Tools que el usuario no puede apagar. En Energy Ontology Advisor la herramienta de
  * datos va siempre: apagada, el chat respondía "la herramienta está
  * desactivada, actívala desde el compositor" (feedback round 1,
  * 2026-10-16, punto 10). Desde el 2026-10-19 tampoco pinta chip: la fija el
