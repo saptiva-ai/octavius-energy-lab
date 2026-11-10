@@ -317,7 +317,7 @@ make logs
 ./scripts/database/restore-mongodb.sh
 
 # Inicializar Bank Advisor
-./scripts/init-retailadvisor-db.sh
+make db-migrate
 
 # Migraciones
 python scripts/database/migrate-conversation-timestamps.py

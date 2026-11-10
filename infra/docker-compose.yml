@@ -394,10 +394,11 @@ services:
   # ========================================
   # POSTGRESQL - Platform Database
   # ========================================
-  # General-purpose PostgreSQL for the platform.
-  # Only runs in local/dev environments via profile.
+  # PostgreSQL de la plataforma y de la base energy_lab del laboratorio.
+  # Solo arranca con --profile local o --profile lab. El puerto se publica
+  # únicamente en 127.0.0.1 (servicio privado por omisión).
   postgres:
-    profiles: ["local"]  # Only start with --profile local or in dev override
+    profiles: ["local", "lab"]
     image: postgres:15-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-octavius-energy-lab}-postgres
     restart: unless-stopped
@@ -410,7 +411,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-octavios} -d ${POSTGRES_DB:-octavios}"]
       interval: 30s
