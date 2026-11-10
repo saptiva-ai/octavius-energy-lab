@@ -18,6 +18,15 @@ services:
   redis:
     ports: !reset []
   minio:
+    # minio/minio ya no se publica en Docker Hub. RustFS es compatible con la API
+    # S3 de MinIO (mismo puerto 9000, mismo /minio/health/live), Apache 2.0.
+    image: rustfs/rustfs:1.0.3
+    command: !override ["rustfs"]
+    environment:
+      - RUSTFS_ACCESS_KEY=${MINIO_ROOT_USER:-minioadmin}
+      - RUSTFS_SECRET_KEY=${MINIO_ROOT_PASSWORD:-minioadmin123}
+      - RUSTFS_VOLUMES=/data
+      - RUSTFS_ADDRESS=:9000
     ports: !reset []
   file-manager:
     ports: !reset []
