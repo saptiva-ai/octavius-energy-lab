@@ -1,0 +1,98 @@
+# Core FastAPI dependencies
+# SECURITY UPDATE 2025-11-24: Updated to fix Starlette vulnerabilities
+# - GHSA-2c2j-9gv5-cj73 (Starlette < 0.47.2)
+# - GHSA-7f5h-v6xp-fcq8 (Starlette < 0.49.1)
+fastapi>=0.115.0  # Includes starlette>=0.49.1 (security fix)
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+motor>=3.3.2
+pymongo>=4.6.0
+beanie>=1.24.0,<2.0  # 2.0 droppea motor — ver docs/kanban/.../init-beanie-typeerror
+redis>=5.0.1
+
+# HTTP client
+httpx[http2]>=0.25.2
+aiohttp>=3.9.5
+# SECURITY UPDATE 2026-01-16: Updated to fix urllib3 decompression bomb
+# - GHSA-s4qx-8jg7-v7qg (streaming decompression vulnerability)
+# Previous fixes: GHSA-48p4-8xcf-vxj5, GHSA-pq67-6m6q-mj2v
+urllib3>=2.6.3  # Security fix for CWE-409 decompression vulnerability
+
+# Authentication
+# SECURITY UPDATE 2026-01: Migrated to PyJWT to eliminate vulnerable ecdsa dependency (CVE-2024-23342)
+PyJWT>=2.8.0
+passlib[argon2,bcrypt]>=1.7.4
+python-multipart>=0.0.22  # CVE-2026-24486 fix
+email-validator>=2.1.0
+
+# Email
+fastapi-mail>=1.4.1
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Logging and monitoring
+structlog>=23.2.0
+
+# OpenTelemetry
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-instrumentation-fastapi>=0.42b0
+opentelemetry-instrumentation-httpx>=0.42b0
+opentelemetry-instrumentation-logging>=0.42b0
+opentelemetry-instrumentation-pymongo>=0.42b0
+opentelemetry-instrumentation-redis>=0.42b0
+opentelemetry-exporter-jaeger-thrift>=1.21.0
+opentelemetry-exporter-otlp>=1.21.0
+
+# Streaming
+sse-starlette>=1.8.2
+
+# Object Storage (V2 Future - Optional)
+minio>=7.2.0
+
+# Document processing (V1 - PDF text extraction)
+pypdf>=3.17.0
+# pymupdf - Removed 2026-01: PDF processing delegated to file-manager plugin via gRPC
+# saptiva-agents - Removed 2026-01-30: PDF extraction via file-manager gRPC
+filetype>=1.2.0  # FIX ISSUE-011: Magic byte validation for file uploads
+
+# PDF Report Generation — reportlab lives in whichever domain plugin needs it,
+# not in the agnostic host.
+# reportlab>=4.0.0
+opencv-python-headless>=4.8.0  # Logo detection and template matching
+
+# OCR (MVP-OCR: Image text extraction)
+pytesseract>=0.3.10
+Pillow>=12.1.1
+pillow-heif>=0.13.0
+
+# Text Analysis & Validation (COPILOTO-414)
+rapidfuzz>=3.0.0  # Fuzzy string matching for compliance validation
+PyYAML>=6.0.0  # YAML configuration parsing
+jsonschema>=4.19.0  # Tool schema validation
+
+# Metrics
+prometheus-client>=0.19.0
+
+# MCP (Model Context Protocol) - Official SDK
+mcp>=1.3.0  # Core MCP types and protocol
+fastmcp>=2.0.0  # FastMCP SDK (depends on mcp)
+
+# Data Analysis
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# gRPC (Plugin communication)
+grpcio>=1.60.0  # gRPC client for plugin services
+# Proto stubs for gRPC plugin communication
+# SECURITY UPDATE 2026-01-30: CVE-2026-0994 fixed
+protobuf>=6.33.5
+
+# RAG & Vector Database
+qdrant-client>=1.12.0  # Qdrant vector database client
+weaviate-client>=4.5.0 # Weaviate vector database client (v5 migration)
+sentence-transformers>=3.3.0  # Multilingual sentence embeddings

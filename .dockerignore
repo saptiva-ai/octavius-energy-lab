@@ -1,0 +1,212 @@
+# ============================================================================
+# DOCKER IGNORE CONFIGURATION
+# ============================================================================
+# Optimized for Copilotos Bridge - Reduces build context size and improves security
+
+# ============================================================================
+# VERSION CONTROL
+# ============================================================================
+.git/
+.gitignore
+.gitattributes
+**/.git
+**/.gitignore
+
+# ============================================================================
+# ENVIRONMENT & SECRETS
+# ============================================================================
+.env
+.env.*
+.envrc
+*.env
+*.env.*
+!.env.example
+!.env.*.example
+envs/.env.local
+envs/.env.prod
+envs/.env.staging
+envs/.env.production
+
+# ============================================================================
+# DEPENDENCIES & PACKAGE MANAGERS
+# ============================================================================
+# Node.js
+node_modules/
+**/node_modules/
+.npm/
+.pnpm-store/
+.pnpm/
+.pnp.*
+npm-debug.log*
+pnpm-debug.log*
+.npmrc
+jspm_packages/
+.yarn-integrity
+*.tgz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.venv/
+**/venv/
+**/.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.ruff_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+# UV-specific caches (should be in Docker mount, not build context)
+.uv/
+uv.lock
+
+# ============================================================================
+# BUILD ARTIFACTS & CACHE
+# ============================================================================
+# Frontend builds
+.next/
+apps/web/.next/
+.next-*/
+dist/
+build/
+out/
+coverage/
+.turbo/
+.vercel/
+.nyc_output/
+
+# Python builds
+build/
+develop-eggs/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+
+# ============================================================================
+# DEVELOPMENT TOOLS & TESTING
+# ============================================================================
+# Test files and directories
+tests/
+test/
+__tests__/
+*.test.*
+*.spec.*
+cypress/
+.jest/
+
+# Development configurations
+jest.config.js
+pytest.ini
+.eslintrc.*
+.prettierrc
+tailwind.config.js
+
+# ============================================================================
+# IDE & EDITOR FILES
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.spyderproject
+.spyproject
+.ropeproject
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ============================================================================
+# LOGS & RUNTIME
+# ============================================================================
+*.log
+logs/
+pids/
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
+
+# ============================================================================
+# DOCUMENTATION & METADATA
+# ============================================================================
+README.md
+README.*.md
+CHANGELOG.md
+LICENSE
+*.md
+docs/
+!docs/docker/
+
+# ============================================================================
+# CI/CD & DEPLOYMENT
+# ============================================================================
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+Jenkinsfile
+docker-compose.dev.yml
+docker-compose.override.yml
+!docker-compose.yml
+!docker-compose.production.yml
+
+# ============================================================================
+# PROJECT SPECIFIC EXCLUSIONS
+# ============================================================================
+# Research artifacts
+research_cache/
+*.research
+.research/
+
+# Monitoring configurations (keep only essentials)
+monitoring/
+!monitoring/prometheus.yml
+!monitoring/grafana/
+
+# Scripts (selective inclusion)
+scripts/
+!scripts/docker-entrypoint.sh
+!scripts/wait-for-it.sh
+!scripts/mongo-init.js
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+
+# Backup data
+backups/
+*.sql
+*.dump

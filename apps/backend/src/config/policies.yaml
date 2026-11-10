@@ -1,0 +1,145 @@
+
+policies:
+  - id: "auto"
+    name: "Auto-Detection Policy"
+    description: "Policy for auto-detecting the correct validation policy."
+    auto_detect: true
+    client_name: null
+    heuristics:
+      - type: "logo_detection"
+        weight: 0.4
+        config:
+          target_policy: "demo-std"
+      - type: "keyword_match"
+        weight: 0.35
+        config:
+          pages_to_check: [0, 1, -1]
+          patterns:
+            - keywords: ["Demo Capital"]
+              target_policy: "demo-std"
+    fallback: "demo-std"
+    confidence_threshold: 0.5
+    disclaimers: {}
+    logo: {}
+    format: {}
+
+  - id: "demo-std"
+    name: "Demo Capital Standard"
+    description: "Standard validation policy for Demo Capital documents."
+    auto_detect: false
+    client_name: "Demo Capital"
+    document_type: "presentation"  # Options: "presentation", "report", "legal"
+    disclaimers:
+      enabled: true
+      templates: ["demo-std-es-v1", "demo-std-es-v2"]
+      min_coverage: 1.0
+      tolerance: 0.85
+      severity: "high"
+    logo:
+      enabled: true
+      min_similarity: 0.75
+      required_pages: ["first", "last"]
+      severity: "high"
+    format:
+      enabled: true
+      numeric_format:
+        enabled: true
+        style: "MX"
+        thousand_sep: ","
+        decimal_sep: "."
+        min_decimals: 2
+        max_decimals: 2
+        severity: "high"
+        # Whitelist: brand names and identifiers that look like numbers
+        whitelist_patterns:
+          - "demo"  # Brand name "Demo Capital"
+          - "Demo Capital"
+          - "D3M0"  # Stylized brand name
+      fonts:
+        severity: "medium"
+      colors:
+        severity: "low"
+      image_coverage:
+        # Adjust thresholds by document_type
+        # presentation: high coverage OK (pitch decks)
+        # report: medium coverage OK (business reports)
+        # legal: low coverage only (legal docs)
+        max_dominant_image_ratio: 0.80  # 80% for presentations (was 65%)
+        severity: "info"  # Don't flag presentations with many images
+    typography:
+      enabled: true
+      heading_font_threshold: 18
+      max_heading_levels: 5
+      min_line_spacing: 0.5
+      max_line_spacing: 2.5
+      severity_heading: "low"
+      severity_spacing: "low"
+    color_palette:
+      enabled: true
+      allowed_colors:
+        - "#002B5C"  # Navy blue (color primario de ejemplo)
+        - "#FFFFFF"  # White
+        - "#000000"  # Black
+        - "#4A90E2"  # Light blue
+        - "#7F8C8D"  # Gray
+        - "#F0F0F0"  # Light gray
+      tolerance: 0.12  # 12% tolerance (normalized 0.0-1.0)
+      severity: "medium"
+    entity_consistency:
+      enabled: true
+      entities:
+        client_names:
+          canonical:
+            - "Demo Capital"
+            - "Banco Nacional de México"
+            - "BancoMuestra"
+          tolerance: 90  # Fuzzy match score (0-100)
+        currencies:
+          canonical:
+            - "MXN"
+            - "USD"
+          symbols:
+            - "$"
+            - "US$"
+            - "MX$"
+      severity_name_mismatch: "high"
+      severity_currency_mismatch: "medium"
+    semantic_consistency:
+      enabled: true
+      min_section_len: 200  # Minimum section length in characters
+      section_titles:
+        - "Resumen Ejecutivo"
+        - "Metodología"
+        - "Resultados"
+        - "Conclusiones"
+      similarity_threshold: 0.80  # Minimum cosine similarity (0.0-1.0)
+      severity: "medium"
+    grammar:
+      enabled: true
+      # Whitelist: Financial and technical terms that LanguageTool flags incorrectly
+      whitelist_terms:
+        # Accounting standards
+        - "IFRS"
+        - "ASC"
+        - "Framework"
+        # Valuation terms
+        - "Valuation"
+        - "Analyst"
+        - "Modeling"
+        - "Appraiser"
+        # Data providers
+        - "PitchBook"
+        - "Preqin"
+        - "EMIS"
+        - "Refinitiv"
+        - "Eikon"
+        # Methodology
+        - "LBO"
+        - "IPO"
+        - "PEV"
+        - "IVSC"
+        # Brand-specific
+        - "D3M0"
+        - "Valorador"
+        - "Valtrack"
+      severity: "low"

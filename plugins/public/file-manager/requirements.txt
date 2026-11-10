@@ -1,0 +1,42 @@
+# =============================================================================
+# OctaviOS File Manager Plugin - Dependencies
+# =============================================================================
+
+# Core Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Storage
+minio>=7.2.0
+redis>=5.0.0
+
+# File Processing
+pypdf>=4.0.0
+PyMuPDF>=1.23.0
+python-magic>=0.4.27
+pillow>=12.1.1
+pytesseract>=0.3.10
+filetype>=1.2.0
+
+# MCP Protocol
+fastmcp>=2.0.0
+
+# gRPC Server (high-performance file operations)
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+grpcio-reflection>=1.60.0
+
+# HTTP Client (for health checks)
+httpx>=0.26.0
+
+# Utilities
+structlog>=24.1.0
+python-multipart>=0.0.6
+aiofiles>=23.2.0
+
+# Development (optional)
+# pytest>=8.0.0
+# pytest-asyncio>=0.23.0
+# httpx>=0.26.0

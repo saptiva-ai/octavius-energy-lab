@@ -1,0 +1,441 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[codz]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py.cover
+.hypothesis/
+.pytest_cache/
+cover/
+# Generated test/report JSON outputs
+apps/web/test-results/**/*.json
+
+# Reports — tracked (benchmarks, triage, playwright)
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+.pybuilder/
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+#   For a library or package, you might want to ignore these files since the code is
+#   intended to run in multiple environments; otherwise, check them in:
+# .python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# UV
+#   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#uv.lock
+
+# poetry
+#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
+#   This is especially recommended for binary packages to ensure reproducibility, and is more
+#   commonly ignored for libraries.
+#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
+#poetry.lock
+#poetry.toml
+
+# pdm
+#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
+#   pdm recommends including project-wide configuration in pdm.toml, but excluding .pdm-python.
+#   https://pdm-project.org/en/latest/usage/project/#working-with-version-control
+#pdm.lock
+#pdm.toml
+.pdm-python
+.pdm-build/
+
+# pixi
+#   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
+#pixi.lock
+#   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
+#   in the .venv directory. It is recommended not to include this directory in version control.
+.pixi
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments - CRÍTICO: Nunca commitear archivos con secretos
+.env
+.env.*
+.envrc
+*.env
+*.env.*
+**/apps/**/.env*
+envs/.env
+envs/.env.*
+!envs/.env.*.example
+
+# Archivos de secretos adicionales
+secrets.json
+secrets.yaml
+secrets.yml
+*.secrets
+**/config/secrets.*
+**/secrets/
+
+# Production secrets export file - CRÍTICO: NUNCA COMMITEAR
+production-secrets.txt
+production-secrets*.txt
+*.production-secrets.*
+
+# EXCEPCIONES: Solo archivos .example permitidos
+!.env.example
+!.env.*.example
+!**/.env.*.example
+!**/.env.sample
+!envs/.env.local.example
+!envs/.env.secrets.example
+!envs/.env.secrets.template
+.venv
+apps/api/venv_test/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+plan.yaml
+# CLAUDE.md - NOW TRACKED (central agent context)
+.claude/.env.claude
+.claude/output/*_logs.md
+.claude/output/quick_checks.md
+.claude/output/infra_doctor.md
+.claude/output/happy_path_results.json
+CLAUDE.local.md
+test.txt
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
+#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
+#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
+#  and can be added to the global gitignore or merged into this file.  For a more nuclear
+#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
+#.idea/
+
+# Abstra
+# Abstra is an AI-powered process automation framework.
+# Ignore directories containing user credentials, local state, and settings.
+# Learn more at https://abstra.io/docs
+.abstra/
+
+# Visual Studio Code
+#  Visual Studio Code specific template is maintained in a separate VisualStudioCode.gitignore
+#  that can be found at https://github.com/github/gitignore/blob/main/Global/VisualStudioCode.gitignore
+#  and can be added to the global gitignore or merged into this file. However, if you prefer,
+#  you could uncomment the following to ignore the entire vscode folder
+# .vscode/
+
+# Ruff stuff:
+.ruff_cache/
+
+# PyPI configuration file
+.pypirc
+
+# Cursor
+#  Cursor is an AI-powered code editor. `.cursorignore` specifies files/directories to
+#  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
+#  refer to https://docs.cursor.com/context/ignore-files
+.cursorignore
+.cursorindexingignore
+
+# Marimo
+marimo/_static/
+marimo/_lsp/
+__marimo__/
+
+# Node / Next / pnpm
+node_modules/
+.pnpm-store/
+.pnpm/
+.pnp.*
+.npm/
+.npmrc
+pnpm-debug.log
+
+# Next / build
+.next/
+.next-*/
+out/
+dist/
+.next/cache/
+.turbo/
+.vercel/
+*.tsbuildinfo
+
+# Tests / coverage
+coverage/
+
+# SO / editor
+.DS_Store
+*.log
+.vercel
+
+# Archivos temporales del navegador
+javascriptconsole.txt
+
+# Archivos temporales de testing
+auditor.txt
+
+# ============================================================================
+# PROJECT SPECIFIC
+# ============================================================================
+
+# Deep Research artifacts
+research_cache/
+*.research
+.research/
+
+# API Documentation
+docs/build/
+docs/_build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# IDE specific
+.idea/
+.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Deployment packages
+*.tar.gz
+*.tar.gz.sha256
+copilotos-bridge-*.tar.gz
+
+# Playwright
+playwright/
+!docs/reports/playwright/
+playwright-report/
+test-results/
+test-data/
+apps/web/e2e/.auth/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/blob-report/
+.playwright-mcp/
+
+# Test output JSON files (generated by test processes)
+*_test_results.json
+hallucination_test_results.json
+happy_path_results.json
+tests/**/*.json
+
+# Temporary and build artifacts
+apps/web/tmp/
+apps/api/diagnostico/
+apps/api/venv_test/
+apps/api/logs/
+
+# Debug and benchmark directories (generated outputs)
+.benchmarks/
+benchmark_results/
+**/benchmarks/
+bug_fixes_debug/
+happy_path_debug/
+# Claude Code documentation - NOW TRACKED AS CENTRAL CONTEXT
+# CLAUDE.md is the primary source, AGENTS.md and GEMINI.md are symlinks
+
+# Additional virtual environments (Python)
+.venv_gpu/
+.venv_icap_extraction/
+
+# PDF to Markdown conversion tool outputs
+tests/inputs_pdfs/
+tests/outputs_markdown/
+tests/codigo_fuente_extraccion/
+tests/*.zip
+tests/MENSAJE_*.txt
+tests/MENSAJE_*.md
+tests/CODIGO_FUENTE_README.md
+tests/codigo_fuente_pdf_to_markdown.py
+tests/INSTRUCCIONES_ENVIO_FRANCISCO.txt
+
+# Production audit reports - CRITICAL: Contains sensitive production data
+audit-report-production.md
+audit-report-production.json
+audit-report-*.json
+audit-report-*.md
+
+# Debug tools with production credentials
+debug_tool.py
+*debug_tool*.py
+happy_path_debug/
+
+# Logs and deprecated files
+.logs/
+
+# Large data files (>100MB)
+/plugins/data
+
+# Client-specific test data (sensitive)
+tests/data/sample-docs/
+
+# Database backups (binary data ignored, README tracked)
+scripts/backups/**/octavios/
+
+# LaTeX auxiliary files
+*.aux
+*.out
+*.toc
+*.log
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+*.bbl
+*.blg
+
+# Claude Code local overrides (auto-generated)
+.claude/settings.local.json
+
+# Claude Code observability logs
+.claude/logs/
+docs/agent/session_profile.md
+
+# Generated by .claude/hooks/session_start.sh (local agent context)
+.claude/docs/repo_map.md
+.claude/docs/session_profile.md
+
+# Kanban sync queue (local state)
+docs/.kanban-sync-queue.json
+
+# Archived and Source Documentation
+docs/archive/
+docs/tex/
+docs/bugfixes/
+docs/security/
+docs_archive_*.zip
+docs_tex_*.zip
+
+# Materiales de referencia locales (no se versionan)
+referencias/
+
+# Datos crudos de fuentes externas: nunca se versionan.
+ejemplos de tablas.zip
+bquxjob_*.csv
+
+# Screenshots sueltos en la raíz (la evidencia curada va en
+# docs/kanban/reportes/**) y artefactos del navegador MCP de sesiones
+/*.png
+.playwright-mcp/

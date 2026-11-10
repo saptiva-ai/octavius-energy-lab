@@ -1,0 +1,12 @@
+.vercel
+
+# Next.js build output
+.next/
+out/
+
+# Build artifacts
+*.tsbuildinfo
+next-env.d.ts
+
+# Playwright generated output snapshots/metadata
+test-results/**/*.json

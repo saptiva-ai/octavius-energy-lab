@@ -1,0 +1,174 @@
+# ============================================================================
+# PROMETHEUS ALERTING RULES FOR COPILOTOS BRIDGE
+# ============================================================================
+
+groups:
+  - name: octavios-bridge-alerts
+    rules:
+      # ========================================================================
+      # HIGH PRIORITY ALERTS
+      # ========================================================================
+
+      - alert: HighErrorRate
+        expr: (rate(octavios_errors_total[5m]) / rate(octavios_requests_total[5m])) * 100 > 5
+        for: 2m
+        labels:
+          severity: critical
+          service: octavios-bridge
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% over the last 5 minutes"
+
+      - alert: APIDown
+        expr: up{job="octavios-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: octavios-bridge
+        annotations:
+          summary: "API service is down"
+          description: "Copilotos Bridge API has been down for more than 1 minute"
+
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(octavios_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: warning
+          service: octavios-bridge
+        annotations:
+          summary: "High response time detected"
+          description: "95th percentile response time is {{ $value }}s"
+
+      # ========================================================================
+      # DEEP RESEARCH SPECIFIC ALERTS
+      # ========================================================================
+
+      - alert: ResearchOperationFailing
+        expr: rate(octavios_research_duration_seconds_count{success="false"}[10m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: deep-research
+        annotations:
+          summary: "Research operations failing frequently"
+          description: "Research failure rate is {{ $value }} operations per second"
+
+      - alert: LowResearchQuality
+        expr: octavios_research_quality_score < 0.6
+        for: 10m
+        labels:
+          severity: warning
+          service: deep-research
+        annotations:
+          summary: "Low research quality detected"
+          description: "Research quality score is {{ $value }} for research type {{ $labels.research_type }}"
+
+      - alert: SlowResearchOperations
+        expr: histogram_quantile(0.95, rate(octavios_research_duration_seconds_bucket[10m])) > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: deep-research
+        annotations:
+          summary: "Slow research operations"
+          description: "95th percentile research duration is {{ $value }}s for phase {{ $labels.research_phase }}"
+
+      # ========================================================================
+      # INTENT CLASSIFICATION ALERTS
+      # ========================================================================
+
+      - alert: HighAmbiguousClassifications
+        expr: (rate(octavios_intent_classification_total{intent_type="Ambiguous"}[10m]) / rate(octavios_intent_classification_total[10m])) * 100 > 30
+        for: 10m
+        labels:
+          severity: warning
+          service: intent-classification
+        annotations:
+          summary: "High rate of ambiguous intent classifications"
+          description: "{{ $value }}% of intent classifications are ambiguous"
+
+      - alert: LowClassificationConfidence
+        expr: (rate(octavios_intent_classification_total{confidence_level="low"}[10m]) / rate(octavios_intent_classification_total[10m])) * 100 > 20
+        for: 10m
+        labels:
+          severity: warning
+          service: intent-classification
+        annotations:
+          summary: "High rate of low-confidence classifications"
+          description: "{{ $value }}% of classifications have low confidence"
+
+      # ========================================================================
+      # SYSTEM RESOURCE ALERTS
+      # ========================================================================
+
+      - alert: HighActiveConnections
+        expr: octavios_active_connections > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: octavios-bridge
+        annotations:
+          summary: "High number of active connections"
+          description: "{{ $value }} active connections detected"
+
+      - alert: MemoryUsageHigh
+        expr: octavios_memory_usage_bytes{type="rss"} > 1073741824  # 1GB
+        for: 5m
+        labels:
+          severity: warning
+          service: octavios-bridge
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanize1024 }}"
+
+      # ========================================================================
+      # EXTERNAL API ALERTS
+      # ========================================================================
+
+      - alert: ExternalAPIHighErrorRate
+        expr: (rate(octavios_external_api_calls_total{status="error"}[5m]) / rate(octavios_external_api_calls_total[5m])) * 100 > 10
+        for: 3m
+        labels:
+          severity: warning
+          service: external-apis
+        annotations:
+          summary: "High external API error rate"
+          description: "{{ $value }}% error rate for {{ $labels.service }} API"
+
+      - alert: ExternalAPISlowResponse
+        expr: histogram_quantile(0.95, rate(octavios_external_api_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+          service: external-apis
+        annotations:
+          summary: "Slow external API responses"
+          description: "95th percentile response time is {{ $value }}s for {{ $labels.service }}"
+
+      # ========================================================================
+      # CACHE PERFORMANCE ALERTS
+      # ========================================================================
+
+      - alert: LowCacheHitRate
+        expr: (rate(octavios_cache_operations_total{hit="hit"}[10m]) / rate(octavios_cache_operations_total[10m])) * 100 < 70
+        for: 10m
+        labels:
+          severity: warning
+          service: cache
+        annotations:
+          summary: "Low cache hit rate"
+          description: "Cache hit rate is {{ $value }}% for {{ $labels.backend }}"
+
+      # ========================================================================
+      # RATE LIMITING ALERTS
+      # ========================================================================
+
+      - alert: HighRateLimitHits
+        expr: rate(octavios_rate_limit_hits_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: rate-limiting
+        annotations:
+          summary: "High rate of rate limit violations"
+          description: "{{ $value }} rate limit hits per second for endpoint {{ $labels.endpoint }}"

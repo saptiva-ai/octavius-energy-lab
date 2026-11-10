@@ -1,0 +1,17 @@
+{
+  "name": "@octavios/mcp-sdk",
+  "version": "0.1.0",
+  "description": "Minimal MCP client for OctaviOS frontends",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "eslint src --max-warnings=0 || true",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

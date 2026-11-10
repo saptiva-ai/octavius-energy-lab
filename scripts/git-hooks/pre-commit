@@ -1,0 +1,197 @@
+#!/bin/bash
+################################################################################
+# Pre-Commit Hook - Security Check
+#
+# Prevents committing sensitive information like:
+# - Real API keys
+# - Production IPs
+# - Hardcoded credentials
+# - .env files
+#
+# Installation:
+#   ln -sf ../../scripts/git-hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or run:
+#   make install-hooks
+################################################################################
+
+set -e
+
+# Status symbols
+RED="✖ "
+YELLOW="▲ "
+GREEN="✔ "
+NC=""
+
+ISSUES_FOUND=0
+
+echo ""
+echo -e "${YELLOW}Running pre-commit security checks...${NC}"
+echo ""
+
+# ============================================================================
+# 1. Check for .env files
+# ============================================================================
+ENV_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(env|env\.|environment)' | grep -v '\.example\|\.template' || true)
+
+if [ -n "$ENV_FILES" ]; then
+    echo -e "${RED}BLOCKED: Attempting to commit .env files${NC}"
+    echo ""
+    echo "Files:"
+    echo "$ENV_FILES" | sed 's/^/  /'
+    echo ""
+    echo -e "${YELLOW}These files should never be committed.${NC}"
+    echo "Remove them with:"
+    echo -e "  ${GREEN}git reset HEAD <file>${NC}"
+    echo ""
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+# ============================================================================
+# 2. Check for real API keys (SAPTIVA format: va-ai-...)
+# ============================================================================
+API_KEY_MATCHES=$(git diff --cached -U0 | grep -E '^\+.*va-ai-[A-Za-z0-9_-]{40,}' || true)
+
+if [ -n "$API_KEY_MATCHES" ]; then
+    echo -e "${RED}BLOCKED: Real API key detected${NC}"
+    echo ""
+    echo "Matches:"
+    echo "$API_KEY_MATCHES" | sed 's/^/  /'
+    echo ""
+    echo -e "${YELLOW}API keys should NEVER be committed.${NC}"
+    echo "Use environment variables instead:"
+    echo -e "  ${GREEN}SAPTIVA_API_KEY=\${SAPTIVA_API_KEY}${NC}"
+    echo ""
+    ISSUES_FOUND=$((ISSUES_FOUND + 1))
+fi
+
+# ============================================================================
+# 3. Check for production server IP
+# ============================================================================
+# Allow IPs in documentation with ${VARIABLE} or example contexts
+PROD_IP_MATCHES=$(git diff --cached -U0 | grep -E '^\+' | grep -E '\b([0-9]{1,3}\.){3}[0-9]{1,3}\b' | \
+    grep -v '127\.0\.0\.1\|0\.0\.0\.0\|localhost\|192\.168\.' | \
+    grep -v '\${.*}\|\$PROD_SERVER_IP\|your-server-ip\|example\|EXAMPLE' | \
+    grep -v '\.md:\+' || true)
+
+if [ -n "$PROD_IP_MATCHES" ]; then
+    echo -e "${YELLOW}WARNING: Production IP address detected${NC}"
+    echo ""
+    echo "Matches:"
+    echo "$PROD_IP_MATCHES" | sed 's/^/  /' | head -5
+    echo ""
+    echo -e "${YELLOW}Production IPs should use environment variables:${NC}"
+    echo -e "  ${GREEN}PROD_SERVER_IP=\${PROD_SERVER_IP}${NC}"
+    echo ""
+    echo "Is this intentional? (y/N)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    fi
+fi
+
+# ============================================================================
+# 4. Check for hardcoded passwords/secrets
+# ============================================================================
+SECRET_PATTERNS=(
+    "PASSWORD=.*[^=\$\{]"
+    "SECRET=.*[^=\$\{]"
+    "API_KEY=.*[^=\$\{]"
+    "TOKEN=.*[^=\$\{]"
+)
+
+for pattern in "${SECRET_PATTERNS[@]}"; do
+    MATCHES=$(git diff --cached -U0 | grep -E '^\+' | grep -iE "$pattern" | \
+        grep -v '\${.*}\|CHANGE_ME\|your-.*-here\|example\|\.md:\+' || true)
+
+    if [ -n "$MATCHES" ]; then
+        echo -e "${YELLOW}WARNING: Potential hardcoded secret detected${NC}"
+        echo ""
+        echo "Pattern: $pattern"
+        echo "Matches:"
+        echo "$MATCHES" | sed 's/^/  /' | head -3
+        echo ""
+        echo "Use environment variables instead of hardcoding secrets."
+        echo ""
+        echo "Is this a false positive? (y/N)"
+        read -r response
+        if [[ ! "$response" =~ ^[Yy]$ ]]; then
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        fi
+    fi
+done
+
+# ============================================================================
+# 5. Check for absolute paths (potential server exposure)
+# ============================================================================
+ABS_PATH_MATCHES=$(git diff --cached -U0 | grep -E '^\+' | \
+    grep -E '/home/(jf|ubuntu|jazielflo|user)/' | \
+    grep -v '\${.*}\|DEPLOY_PATH\|your-path\|example\|\.md:\+' || true)
+
+if [ -n "$ABS_PATH_MATCHES" ]; then
+    echo -e "${YELLOW}WARNING: Absolute server paths detected${NC}"
+    echo ""
+    echo "Matches:"
+    echo "$ABS_PATH_MATCHES" | sed 's/^/  /' | head -3
+    echo ""
+    echo -e "${YELLOW}Use environment variables for deployment paths:${NC}"
+    echo -e "  ${GREEN}DEPLOY_PATH=\${DEPLOY_PATH}${NC}"
+    echo ""
+    echo "Is this intentional? (y/N)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    fi
+fi
+
+# ============================================================================
+# 6. Check for large files (>1MB)
+# ============================================================================
+LARGE_FILES=$(git diff --cached --name-only --diff-filter=ACM | \
+    while read -r file; do
+        if [ -f "$file" ]; then
+            size=$(wc -c < "$file" 2>/dev/null || echo 0)
+            if [ "$size" -gt 1048576 ]; then
+                echo "$file ($((size / 1024 / 1024))MB)"
+            fi
+        fi
+    done)
+
+if [ -n "$LARGE_FILES" ]; then
+    echo -e "${YELLOW}WARNING: Large files detected (>1MB)${NC}"
+    echo ""
+    echo "Files:"
+    echo "$LARGE_FILES" | sed 's/^/  /'
+    echo ""
+    echo "Consider using Git LFS for large files."
+    echo ""
+    echo "Continue anyway? (y/N)"
+    read -r response
+    if [[ ! "$response" =~ ^[Yy]$ ]]; then
+        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+    fi
+fi
+
+# ============================================================================
+# Summary
+# ============================================================================
+echo ""
+echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+
+if [ "$ISSUES_FOUND" -eq 0 ]; then
+    echo -e "${GREEN}Security checks passed!${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    exit 0
+else
+    echo -e "${RED}Security checks failed: $ISSUES_FOUND issue(s) found${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo "To bypass this check (NOT RECOMMENDED):"
+    echo -e "  ${RED}git commit --no-verify${NC}"
+    echo ""
+    echo "Or fix the issues and try again."
+    echo ""
+    exit 1
+fi

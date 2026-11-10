@@ -1,0 +1,61 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "document_processing_rs"
+version = "0.1.0"
+description = "High-performance document processing for OctaviOS File Manager"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "Saptiva Team", email = "dev@saptiva.com" }
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+    "Topic :: Text Processing",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: Scientific/Engineering :: Image Processing",
+]
+keywords = ["pdf", "ocr", "document", "processing", "rust", "pyo3"]
+
+[project.urls]
+Homepage = "https://github.com/saptiva/octavios-chat"
+Documentation = "https://github.com/saptiva/octavios-chat/tree/main/plugins/public/file-manager"
+
+[tool.maturin]
+# Build settings
+features = ["pyo3/extension-module"]
+module-name = "document_processing_rs"
+manifest-path = "Cargo.toml"
+
+# Optimization
+strip = true
+
+# Compatibility
+compatibility = "linux"
+
+# Include additional files in the wheel
+include = [
+    { path = "README.md", format = "sdist" },
+    { path = "LICENSE", format = "sdist" },
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true

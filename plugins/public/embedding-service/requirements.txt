@@ -1,0 +1,27 @@
+# =============================================================================
+# OctaviOS Embedding Service Plugin - Dependencies
+# =============================================================================
+# Size: ~1.15GB (torch CPU-only + sentence-transformers)
+# Note: torch is installed separately via Dockerfile (CPU-only index)
+
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# ML/Embeddings
+# IMPORTANT: torch is pre-installed via Dockerfile using CPU-only index
+# DO NOT add torch here - it would pull CUDA dependencies (~5GB)
+sentence-transformers>=3.3.0
+
+# gRPC Server (Hybrid Architecture: REST + gRPC)
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+grpcio-reflection>=1.60.0
+
+# HTTP Client (for health checks)
+httpx>=0.26.0
+
+# Utilities
+structlog>=24.1.0

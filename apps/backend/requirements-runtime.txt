@@ -1,0 +1,103 @@
+# =============================================================================
+# Backend Runtime Requirements (Lightweight)
+# =============================================================================
+# OPTIMIZATION 2026-01: Removed heavy ML dependencies (~7GB savings)
+# - sentence-transformers: Delegated to embedding-service plugin
+# - torch, nvidia-*, triton: Not needed when using delegation
+# - scipy, scikit-learn: Only used by sentence-transformers
+#
+# For development with local embeddings, use requirements.txt instead.
+# =============================================================================
+
+# Core FastAPI dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Database
+motor>=3.3.2
+pymongo>=4.6.0
+beanie>=1.24.0,<2.0  # 2.0 droppea motor — ver docs/kanban/.../init-beanie-typeerror
+redis>=5.0.1
+
+# HTTP client
+httpx[http2]>=0.25.2
+aiohttp>=3.9.5
+urllib3>=2.6.3
+
+# Authentication
+# SECURITY UPDATE 2026-01: Migrated to PyJWT to eliminate vulnerable ecdsa dependency (CVE-2024-23342)
+PyJWT>=2.8.0
+passlib[argon2,bcrypt]>=1.7.4
+python-multipart>=0.0.22  # CVE-2026-24486 fix
+email-validator>=2.1.0
+
+# Email
+fastapi-mail>=1.4.1
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Logging and monitoring
+structlog>=23.2.0
+
+# OpenTelemetry
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-instrumentation-fastapi>=0.42b0
+opentelemetry-instrumentation-httpx>=0.42b0
+opentelemetry-instrumentation-logging>=0.42b0
+opentelemetry-instrumentation-pymongo>=0.42b0
+opentelemetry-instrumentation-redis>=0.42b0
+opentelemetry-exporter-jaeger-thrift>=1.21.0
+opentelemetry-exporter-otlp>=1.21.0
+
+# Streaming
+sse-starlette>=1.8.2
+
+# Object Storage
+minio>=7.2.0
+
+# Document processing (lightweight - no PyMuPDF)
+pypdf>=3.17.0
+# saptiva-agents - Removed 2026-01-30: PDF extraction via file-manager gRPC
+filetype>=1.2.0
+
+# PDF Report Generation — reportlab lives in whichever domain plugin needs it,
+# not in the agnostic host.
+# reportlab>=4.0.0
+opencv-python-headless>=4.8.0
+
+# OCR client (actual OCR delegated to file-manager)
+pytesseract>=0.3.10
+Pillow>=12.1.1
+pillow-heif>=0.13.0
+
+# Text Analysis & Validation
+rapidfuzz>=3.0.0
+PyYAML>=6.0.0
+jsonschema>=4.19.0
+
+# Metrics
+prometheus-client>=0.19.0
+
+# MCP (Model Context Protocol)
+mcp>=1.3.0
+fastmcp>=2.0.0
+
+# Data Analysis
+pandas>=2.0.0
+openpyxl>=3.1.0
+
+# RAG & Vector Database (clients only - no local model)
+qdrant-client>=1.12.0
+weaviate-client>=4.5.0
+# sentence-transformers - REMOVED: Delegated to embedding-service plugin
+
+# gRPC client for service communication
+grpcio>=1.60.0
+grpcio-tools>=1.60.0
+# Proto stubs for gRPC plugin communication
+# SECURITY UPDATE 2026-01-30: CVE-2026-0994 fixed
+protobuf>=6.33.5

@@ -1,0 +1,98 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copilotos-api"
+version = "0.1.0"
+description = "Copilot OS API - FastAPI backend for chat and deep research"
+authors = [{name = "Copilot OS Team"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "motor>=3.3.2",
+    "pymongo>=4.6.0",
+    "beanie>=1.24.0,<2.0",  # 2.0 droppea motor — ver docs/kanban/.../init-beanie-typeerror
+    "redis>=5.0.1",
+    "httpx>=0.25.2",
+    "PyJWT>=2.12.0",  # CVE-2026-32597: unknown crit header extensions
+    "passlib[argon2,bcrypt]>=1.7.4",
+    "python-multipart>=0.0.27",  # CVE-2026-24486 + CVE-2026-42561 DoS multipart headers
+    "fastapi-mail>=1.4.1",
+    "email-validator>=2.1.0",
+    "jsonschema>=4.19.0",
+    "mcp>=1.23.0",  # CVE-2025-66416 DNS rebinding fix
+    "minio>=7.2.0",
+    "pandas>=2.0.0",
+    "openpyxl>=3.1.0",
+    # "pymupdf>=1.24.0",  # Removed 2026-01: PDF processing delegated to file-manager
+    "pytesseract>=0.3.10",
+    "Pillow>=12.1.1",
+    "aiohttp>=3.13.3",  # CVE-2025-69223 zip bomb fix
+    # "reportlab>=4.0.0",  # lives in whichever domain plugin needs PDF reports, not the host
+    "structlog>=23.2.0",
+    "opentelemetry-api>=1.21.0",
+    "opentelemetry-sdk>=1.21.0",
+    "opentelemetry-instrumentation-fastapi>=0.42b0",
+    "opentelemetry-instrumentation-httpx>=0.42b0",
+    "opentelemetry-instrumentation-logging>=0.42b0",
+    "opentelemetry-instrumentation-pymongo>=0.42b0",
+    "opentelemetry-instrumentation-redis>=0.42b0",
+    "opentelemetry-exporter-jaeger-thrift>=1.21.0",
+    "opentelemetry-exporter-otlp>=1.21.0",
+    "prometheus-client>=0.19.0",
+    "sse-starlette>=1.8.2",
+    # RAG - Vector Database & Embeddings
+    "weaviate-client>=4.5.0",
+    "sentence-transformers>=2.2.2",
+    "tidewave[fastapi]>=0.1.0",
+    # Security constraints for transitive dependencies
+    "pyasn1>=0.6.2",  # CVE-2026-23490 DoS in decoder
+    "filelock>=3.20.1",  # CVE-2025-68146 TOCTOU symlink
+    # SECURITY UPDATE 2026-01-30: CVE-2026-0994 fixed (removed saptiva-agents constraint)
+    "protobuf>=6.33.5",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "pytest-cov>=4.1.0",
+    "mongomock-motor>=0.0.36",
+    "black>=26.3.1",  # CVE-2026-32274: arbitrary file writes from cache
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.7.1",
+    "pre-commit>=3.6.0",
+    "virtualenv>=20.36.1",  # CVE-2026-22702 TOCTOU in directory creation
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -ra"
+pythonpath = ["src", "../.."]  # Enable imports from src/ in local/CI and shared backend package
+asyncio_mode = "auto"

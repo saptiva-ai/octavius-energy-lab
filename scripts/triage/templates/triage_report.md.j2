@@ -1,0 +1,107 @@
+# Reporte de Triage de Feedback — {{ date }}
+
+**Zona horaria**: America/Mexico_City (UTC-6)
+**Ventana de consulta (UTC)**: {{ date_from_utc }} → {{ date_to_utc }}
+**Agente**: {{ agent }}
+**Generado por**: `scripts/triage/generate_report.py`
+
+---
+
+## 0) Panorama
+
+| Metrica | Valor |
+|---------|-------|
+| Total feedback en BD | {{ stats.total_feedbacks }} |
+| Feedback hoy | {{ feedback_today_count }} ({{ thumbs_down_count }} negativos, {{ thumbs_up_count }} positivos) |
+| Conversaciones con feedback hoy | {{ conversations_today_count }} |
+| Thumbs-down ultimos 7 dias | {{ thumbs_down_7d }} |
+{% if stats.top_tickets %}
+### Tickets activos
+
+| Ticket | Status | Feedbacks |
+|--------|--------|-----------|
+{% for t in stats.top_tickets %}| {{ t.ticket_id }} | {{ t.status }} | {{ t.count }} |
+{% endfor %}{% endif %}
+
+---
+
+## 1) Resumen ejecutivo
+
+<!-- LLM_REQUIRED: Analizar los datos de las secciones 2-4 y escribir un resumen
+     de 3-5 lineas con los hallazgos principales del dia. -->
+
+_Pendiente: revisar datos y escribir resumen._
+
+---
+
+## 2) Casos STALE_CHART
+
+{% if stale_charts %}| # | Feedback | Conv | Verdict | Severity | Detail |
+|---|----------|------|---------|----------|--------|
+{% for sc in stale_charts %}| SC-{{ loop.index }} | {{ sc.feedback_id or 'N/A' }} | `{{ sc.conversation_id[:8] }}` | **{{ sc.verdict }}** | {% if sc.verdict == 'STALE' %}S0{% elif sc.verdict == 'COMPARISON_FORMAT' %}S2{% else %}OK{% endif %} | {{ sc.detail }} |
+{% endfor %}
+{% for sc in stale_charts %}{% if sc.verdict != 'OK' %}
+### SC-{{ loop.index }} Detail: {{ sc.feedback_id or 'N/A' }}
+
+**Query**: "{{ sc.user_query }}"
+**Requested period**: {{ sc.requested_period }}
+**Actual x_range**: [{{ sc.actual_x_range | join(', ') }}]
+**Verdict**: {{ sc.verdict }} — {{ sc.detail }}
+
+{% endif %}{% endfor %}{% else %}_No se detectaron casos STALE_CHART en el periodo._
+{% endif %}
+
+---
+
+## 3) Thumbs-down del dia
+
+{% if thumbs_down %}| # | Feedback ID | Conv | Query | Reason |
+|---|------------|------|-------|--------|
+{% for fb in thumbs_down %}| {{ loop.index }} | {{ fb.feedback_id or 'N/A' }} | `{{ fb.conversation_id[:8] }}` | {{ fb.context.original_query[:60] if fb.context and fb.context.original_query else 'N/A' }}{% if fb.context and fb.context.original_query and fb.context.original_query|length > 60 %}...{% endif %} | {{ fb.reason[:60] if fb.reason else 'N/A' }}{% if fb.reason and fb.reason|length > 60 %}...{% endif %} |
+{% endfor %}{% else %}_No hay thumbs-down en el periodo._
+{% endif %}
+
+---
+
+## 4) Mensajes exactos (threads)
+
+{% for conv_id, conv in conversations.items() %}### Conversacion `{{ conv_id[:8] }}`
+
+{% for msg in conv.messages %}**{{ msg.role | upper }}** ({{ msg.created_at }}):
+{{ msg.content[:500] }}{% if msg.content|length > 500 %}...{% endif %}
+
+{% endfor %}{% if conv.artifacts %}#### Artefactos
+
+{% for art in conv.artifacts %}- **{{ art.title }}** (`{{ art.type }}`, {{ art.created_at }})
+  {% if art.type == 'bank_chart' and art.content is mapping %}chart_status={{ art.content.chart_status | default('?') }}, metric={{ art.content.metric_name | default('?') }}, banks={{ art.content.bank_names | default([]) }}{% endif %}
+
+{% endfor %}{% endif %}---
+
+{% endfor %}
+
+## 5) Hipotesis raiz
+
+<!-- LLM_REQUIRED: Para cada thumbs-down, proponer hipotesis de causa raiz
+     basada en la evidencia de las secciones 2 y 4. -->
+
+_Pendiente: analizar evidencia y proponer hipotesis._
+
+---
+
+## 6) Queries de consulta ejecutados
+
+```
+POST /api/internal/feedback/query
+  date_from: {{ date_from_utc }}
+  date_to: {{ date_to_utc }}
+  rating: down
+
+POST /api/internal/feedback/conversations
+  conversation_ids: {{ conversation_ids }}
+
+GET /api/internal/feedback/stale-charts
+  date_from: {{ date_from_utc }}
+  date_to: {{ date_to_utc }}
+
+GET /api/internal/feedback/stats
+```

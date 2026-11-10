@@ -1,0 +1,278 @@
+// =============================================================================
+// OctaviOS File Manager Service - gRPC Service Definition
+// =============================================================================
+// File processing operations via gRPC (HTTP/2)
+// Port: 50052
+// Max message size: 100MB for file uploads
+// =============================================================================
+
+syntax = "proto3";
+
+package filemanager;
+
+// ============================================================================
+// Core Messages
+// ============================================================================
+
+// File chunk for streaming uploads/downloads
+message FileChunk {
+  bytes data = 1;
+  int64 offset = 2;
+  bool is_last = 3;
+}
+
+// File metadata
+message FileMetadata {
+  string file_id = 1;
+  string filename = 2;
+  int64 size_bytes = 3;
+  string content_type = 4;
+  string minio_key = 5;
+  string minio_bucket = 6;
+  string sha256 = 7;
+  string created_at = 8;
+  string last_modified = 9;
+}
+
+// Page content from document extraction
+message PageContent {
+  int32 page = 1;
+  string text_md = 2;
+  bool has_table = 3;
+  string table_csv_key = 4;
+  bool has_images = 5;
+  repeated string image_keys = 6;
+}
+
+// Document extraction result
+message ExtractionResult {
+  string file_id = 1;
+  repeated PageContent pages = 2;
+  int32 total_pages = 3;
+  bool ocr_applied = 4;
+  string ocr_language = 5;
+  string extraction_source = 6;  // "third_party" | "saptiva" | "huggingface"
+  int64 processing_time_ms = 7;
+}
+
+// Progress event for streaming operations
+message ProgressEvent {
+  string file_id = 1;
+  string phase = 2;       // "uploading" | "extracting" | "thumbnailing" | "complete"
+  float progress = 3;     // 0.0 to 1.0
+  string status = 4;      // Human-readable status
+  string error = 5;       // Empty if no error
+}
+
+// ============================================================================
+// Upload Operations
+// ============================================================================
+
+// Metadata for upload request
+message UploadMetadata {
+  string user_id = 1;
+  string filename = 2;
+  string content_type = 3;
+  string session_id = 4;
+  string idempotency_key = 5;
+  bool auto_extract = 6;
+}
+
+// Simple upload (file in single message, max ~100MB)
+message UploadSimpleRequest {
+  UploadMetadata metadata = 1;
+  bytes file_data = 2;
+}
+
+// Upload response
+message UploadResponse {
+  string file_id = 1;
+  FileMetadata metadata = 2;
+  ExtractionResult extraction = 3;  // Only if auto_extract=true
+}
+
+// Streaming upload - first message contains metadata, subsequent contain chunks
+message UploadStreamRequest {
+  oneof content {
+    UploadMetadata metadata = 1;
+    FileChunk chunk = 2;
+  }
+}
+
+// ============================================================================
+// Download Operations
+// ============================================================================
+
+message DownloadRequest {
+  string file_path = 1;
+  string bucket = 2;  // Optional, defaults to "documents"
+}
+
+// Streaming download response
+message DownloadResponse {
+  oneof content {
+    FileMetadata metadata = 1;  // First message
+    FileChunk chunk = 2;        // Subsequent messages
+  }
+}
+
+// ============================================================================
+// Extraction Operations
+// ============================================================================
+
+message ExtractRequest {
+  string file_path = 1;
+  bool force = 2;             // Force re-extraction even if cached
+  string provider = 3;        // Optional: "third_party" | "saptiva" | "huggingface"
+  string ocr_language = 4;    // Optional: default "eng+spa"
+}
+
+message ExtractResponse {
+  ExtractionResult result = 1;
+  bool from_cache = 2;
+}
+
+// ============================================================================
+// Thumbnail Operations
+// ============================================================================
+
+message ThumbnailRequest {
+  string file_path = 1;
+  int32 width = 2;            // Default: 200
+  int32 height = 3;           // Default: 200
+  int32 page = 4;             // For PDFs, default: 0 (first page)
+  string bucket = 5;          // Optional: MinIO bucket override (default: documents)
+}
+
+message ThumbnailResponse {
+  bytes thumbnail = 1;
+  string content_type = 2;    // "image/png" | "image/jpeg"
+  int32 width = 3;
+  int32 height = 4;
+  int32 original_width = 5;
+  int32 original_height = 6;
+  int32 processing_time_ms = 7;
+}
+
+// ============================================================================
+// Metadata Operations
+// ============================================================================
+
+message MetadataRequest {
+  string file_path = 1;
+  bool include_extraction = 2;  // Include cached extraction result
+}
+
+message MetadataResponse {
+  FileMetadata metadata = 1;
+  ExtractionResult extraction = 2;  // Only if include_extraction=true and cached
+}
+
+// ============================================================================
+// Delete Operations
+// ============================================================================
+
+message DeleteRequest {
+  string file_path = 1;
+  string bucket = 2;  // Optional
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// ============================================================================
+// Batch Operations
+// ============================================================================
+
+// Batch extraction request
+message BatchExtractRequest {
+  repeated string file_paths = 1;
+  bool force = 2;
+  string provider = 3;
+}
+
+// Result for a single file in batch
+message BatchExtractResult {
+  string file_path = 1;
+  ExtractionResult result = 2;
+  bool success = 3;
+  string error = 4;
+}
+
+// ============================================================================
+// Health Check
+// ============================================================================
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;              // "healthy" | "degraded" | "unhealthy"
+  map<string, bool> dependencies = 2;  // minio: true, redis: true
+  string version = 3;
+}
+
+// ============================================================================
+// Service Definition
+// ============================================================================
+
+service FileManagerService {
+  // ==========================================================================
+  // Upload Operations
+  // ==========================================================================
+
+  // Simple upload (file in single message)
+  rpc UploadSimple(UploadSimpleRequest) returns (UploadResponse);
+
+  // Streaming upload with progress events
+  rpc Upload(stream UploadStreamRequest) returns (stream ProgressEvent);
+
+  // ==========================================================================
+  // Download Operations
+  // ==========================================================================
+
+  // Streaming download
+  rpc Download(DownloadRequest) returns (stream DownloadResponse);
+
+  // ==========================================================================
+  // Extraction Operations
+  // ==========================================================================
+
+  // Extract text from document
+  rpc Extract(ExtractRequest) returns (ExtractResponse);
+
+  // Extract with progress streaming
+  rpc ExtractStream(ExtractRequest) returns (stream ProgressEvent);
+
+  // Batch extraction (streaming results)
+  rpc BatchExtract(BatchExtractRequest) returns (stream BatchExtractResult);
+
+  // ==========================================================================
+  // Thumbnail Operations
+  // ==========================================================================
+
+  // Generate thumbnail for file
+  rpc GenerateThumbnail(ThumbnailRequest) returns (ThumbnailResponse);
+
+  // ==========================================================================
+  // Metadata Operations
+  // ==========================================================================
+
+  // Get file metadata
+  rpc GetMetadata(MetadataRequest) returns (MetadataResponse);
+
+  // ==========================================================================
+  // Delete Operations
+  // ==========================================================================
+
+  // Delete file
+  rpc Delete(DeleteRequest) returns (DeleteResponse);
+
+  // ==========================================================================
+  // Health Check
+  // ==========================================================================
+
+  // Service health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}

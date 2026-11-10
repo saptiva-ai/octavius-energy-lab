@@ -1,0 +1,1 @@
+"""OctaviOS Embedding Service Plugin."""
