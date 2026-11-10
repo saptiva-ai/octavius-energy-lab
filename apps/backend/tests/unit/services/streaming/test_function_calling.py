@@ -905,6 +905,31 @@ async def _augmentar_con(historial, aumentados, tool_result, status="ok"):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+async def test_tras_ejecutar_tools_se_pide_narrar_sin_llamar_mas_tools():
+    """Sin tools ofrecidas, un modelo escribía `<tool_call>` como texto final."""
+    from src.services.streaming.function_calling import NARRAR_SIN_TOOLS_NOTICE
+
+    historial = [{"role": "user", "content": "que datos tienes?"}]
+    catalogo = {"hits": [{"term": "Hogar"}]}
+    mensajes = await _augmentar_con(
+        historial, _turno_con_tools(historial, catalogo), None
+    )
+    assert NARRAR_SIN_TOOLS_NOTICE in mensajes
+    assert mensajes.index(NARRAR_SIN_TOOLS_NOTICE) > 2  # después del resultado
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_sin_tools_ejecutadas_no_se_agrega_el_aviso_de_narrar():
+    from src.services.streaming.function_calling import NARRAR_SIN_TOOLS_NOTICE
+
+    historial = [{"role": "user", "content": "hola"}]
+    mensajes = await _augmentar_con(historial, historial, None, status="no_calls")
+    assert NARRAR_SIN_TOOLS_NOTICE not in mensajes
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
 async def test_turno_con_datos_anexa_el_aviso_de_formato_para_narrar():
     """Con resultados de datos la narración LLM recibe cómo formatear la
     respuesta (frase con la cifra principal, viñetas con las cifras tal cual,

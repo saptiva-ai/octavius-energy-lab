@@ -68,6 +68,19 @@ DATA_TOOL_OFF_NOTICE = {
     ),
 }
 
+# La narración se hace sin ofrecer tools. Hay modelos que, al ver la conversación
+# terminar en resultados, intentan otra llamada y la escriben como texto
+# (`<tool_call>...`), que le llegaba tal cual al usuario. Genérico: sin dominio.
+NARRAR_SIN_TOOLS_NOTICE = {
+    "role": "system",
+    "content": (
+        "Ya tienes los resultados de las herramientas. Redacta ahora la respuesta "
+        "final para el usuario, en texto natural y en español, usando solo esos "
+        "resultados. En este paso no hay herramientas disponibles: no escribas "
+        "llamadas a herramientas, etiquetas <tool_call> ni JSON de argumentos."
+    ),
+}
+
 # Instrucción SOLO para las llamadas "decide" (no se persiste en los mensajes
 # que narran). Genérica: no menciona tools ni métricas del dominio. Cubre los
 # dos fallos observados en vivo: (a) responder un follow-up con otro desglose
@@ -563,6 +576,8 @@ async def augmentar_con_tools_de_dominio(
     aviso = aviso_del_turno(
         messages, augmented, status, got_data=tool_result is not None
     )
+    if any(m.get("role") == "tool" for m in augmented[len(messages) :]):
+        augmented = [*augmented, NARRAR_SIN_TOOLS_NOTICE]
     if aviso is not None:
         augmented = [*augmented, aviso]
     return augmented, tool_result, status
