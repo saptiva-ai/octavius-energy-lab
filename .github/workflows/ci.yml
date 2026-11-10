@@ -38,6 +38,7 @@ jobs:
       backend: ${{ steps.filter.outputs.backend }}
       web: ${{ steps.filter.outputs.web }}
       file-manager: ${{ steps.filter.outputs.file-manager }}
+      db: ${{ steps.filter.outputs.db }}
       embedding-service: ${{ steps.filter.outputs.embedding-service }}
       services: ${{ steps.matrix.outputs.services }}
       services_csv: ${{ steps.matrix.outputs.services_csv }}
@@ -62,6 +63,8 @@ jobs:
               - 'packages/**'
             file-manager:
               - 'plugins/public/file-manager/**'
+            db:
+              - 'db/**'
             embedding-service:
               - 'plugins/public/embedding-service/**'
 
@@ -78,8 +81,8 @@ jobs:
             exit 1
           fi
           if [[ "$SERVICES_INPUT" == "all" ]]; then
-            echo 'services=["backend","web","file-manager","embedding-service"]' >> $GITHUB_OUTPUT
-            echo "services_csv=backend,web,file-manager,embedding-service" >> $GITHUB_OUTPUT
+            echo 'services=["backend","web","file-manager","embedding-service","db"]' >> $GITHUB_OUTPUT
+            echo "services_csv=backend,web,file-manager,embedding-service,db" >> $GITHUB_OUTPUT
             echo "has_changes=true" >> $GITHUB_OUTPUT
             exit 0
           elif [[ "$SERVICES_INPUT" != "auto" && -n "$SERVICES_INPUT" ]]; then
@@ -96,6 +99,7 @@ jobs:
           [[ "${{ steps.filter.outputs.backend }}" == "true" ]] && SERVICES+=("backend")
           [[ "${{ steps.filter.outputs.web }}" == "true" ]] && SERVICES+=("web")
           [[ "${{ steps.filter.outputs.file-manager }}" == "true" ]] && SERVICES+=("file-manager")
+          [[ "${{ steps.filter.outputs.db }}" == "true" ]] && SERVICES+=("db")
           # embedding-service no tiene pruebas: solo cuenta como cambio.
           [[ "${{ steps.filter.outputs.embedding-service }}" == "true" ]] && SERVICES+=("embedding-service")
 
@@ -120,6 +124,7 @@ jobs:
           echo "| backend | ${{ steps.filter.outputs.backend }} |" >> $GITHUB_STEP_SUMMARY
           echo "| web | ${{ steps.filter.outputs.web }} |" >> $GITHUB_STEP_SUMMARY
           echo "| file-manager | ${{ steps.filter.outputs.file-manager }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| db | ${{ steps.filter.outputs.db }} |" >> $GITHUB_STEP_SUMMARY
           echo "| embedding-service | ${{ steps.filter.outputs.embedding-service }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Services to test:** ${{ steps.matrix.outputs.services_csv || 'none' }}" >> $GITHUB_STEP_SUMMARY
@@ -232,6 +237,47 @@ jobs:
 
       - name: Tests
         run: bun run bun:test:web
+
+  test-db:
+    name: 🧪 Test DB (energy_lab)
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: |
+      github.event.inputs.skip_tests != 'true' &&
+      contains(needs.detect-changes.outputs.services, 'db')
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_PASSWORD: ci_only_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4
+        with:
+          version: 'latest'
+
+      - name: Lint (Ruff)
+        run: |
+          cd db
+          uvx ruff==0.16.5 check .
+          uvx ruff==0.16.5 format --check .
+
+      - name: Migraciones, roles y particiones
+        env:
+          ENERGY_LAB_TEST_ADMIN_DSN: postgresql://postgres:ci_only_password@127.0.0.1:5432/postgres
+        run: |
+          cd db
+          uv run --python 3.11 --with-editable . --with pytest pytest -q
 
   test-file-manager:
     name: 🧪 Test File Manager
@@ -510,6 +556,7 @@ jobs:
       - test-backend
       - test-web
       - test-file-manager
+      - test-db
       - test-regression
       - test-backend-integration-smoke
       - test-web-e2e-smoke
@@ -531,6 +578,7 @@ jobs:
             "test-backend:${{ needs.test-backend.result }}" \
             "test-web:${{ needs.test-web.result }}" \
             "test-file-manager:${{ needs.test-file-manager.result }}" \
+            "test-db:${{ needs.test-db.result }}" \
             "test-regression:${{ needs.test-regression.result }}" \
             "test-backend-integration-smoke:${{ needs.test-backend-integration-smoke.result }}"
           do
